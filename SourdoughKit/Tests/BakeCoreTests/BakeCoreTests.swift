@@ -110,7 +110,7 @@ struct Logs {
         let start = Date(timeIntervalSince1970: 0)
         bulk.start = start
         bulk.end = start.addingTimeInterval(5 * 3600)
-        #expect(bulk.duration == 5 * 3600)
+        #expect(bulk.duration == TimeInterval(5 * 3600))
         bulk.end = start.addingTimeInterval(-1)
         #expect(bulk.duration == nil)
     }
