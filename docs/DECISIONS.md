@@ -67,6 +67,6 @@ _Last updated: 2026-11-13_
 
 1. ~~Write `docs/SPEC.md`~~ — done; see [SPEC.md](SPEC.md) (open questions resolved).
 2. ~~Implement and test the scaling engine~~ — done; see [SourdoughKit](../SourdoughKit/README.md) (`BakeMath`).
-3. ~~Write the SwiftData models~~ — done; see [SourdoughKit](../SourdoughKit/README.md) (`BakeCore`, `BakeStore`). `BakeStore` still needs its first compile on a Mac.
+3. ~~Write the SwiftData models~~ — done; see [SourdoughKit](../SourdoughKit/README.md) (`BakeCore`, `BakeStore`). Verified on a Mac.
 4. ~~Set up the Xcode project~~ — done (XcodeGen, `project.yml`; app shell in `App/`).
 5. Build the screens in the order a bake happens.
