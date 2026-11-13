@@ -39,8 +39,14 @@ _Last updated: 2026-11-13_
 | Temperatures | °F by default, °C available in settings |
 | Weights | Always grams |
 | Timers | Local notifications for timed steps (autolyse, folds, proof, bake), even when the app is closed |
-| Required vs. optional fields | Only required fields can block a build. Required: each flour weight, water, salt, starter weight and starter flour:water ratio. Everything else is optional and left off the summary when empty. |
-| Recipe pre-fill | Each step opens pre-filled from the recipe version. When the bake finishes, the app asks whether to update the version or save a new one; the bake always keeps its actuals. |
+| Required vs. optional fields | Only required fields can block a build. Required: each flour weight, water, salt, starter weight and starter hydration %. Everything else is optional and left off the summary when empty. |
+| Recipe pre-fill | Each step opens pre-filled from the recipe version. The bake always keeps its actuals. |
+| Percentage basis | Every baker's percentage is measured against total flour, starter flour included. The build is calculated as a whole, then the starter's flour and water are backed out to get what goes on the scale. This matches the owner's manual method. |
+| Starter hydration | Entered as a percentage (water ÷ flour), not a parts ratio, so stiff starters and bigas at odd hydrations (for example 55%) fit exactly |
+| Versions are frozen once baked | A version with a completed bake can never be edited. Any planned change made to it, at Build or later, saves as a new version (or a new recipe) when the bake completes. The aim is to fix a recipe, change one variable at a time and track the effect. This may feel strict to other bakers later; revisit before a public release. |
+| Planned change vs. actual | Only deliberate changes to planned values count as a variation. Actuals that differ from the plan (bulk running 30 minutes long) are logged, not treated as a new version. |
+| Starter timing | Part of the recipe's process plan: "with the first mix (before autolyse)" or "after autolyse". Pre-filled, one tap to change, and it can be the single variable a new version tests. |
+| Rise (bulk and proof) | Picked from 25% steps (25–150%) or "not measured", because it is judged by eye |
 
 ## Technical
 
@@ -59,7 +65,7 @@ _Last updated: 2026-11-13_
 
 ## Next steps
 
-1. ~~Write `docs/SPEC.md`~~ — drafted; see [SPEC.md](SPEC.md) and its open questions.
+1. ~~Write `docs/SPEC.md`~~ — done; see [SPEC.md](SPEC.md) (open questions resolved).
 2. Implement and test the scaling engine.
 3. Write the SwiftData models.
 4. Set up the Xcode project and build the screens in the order a bake happens.

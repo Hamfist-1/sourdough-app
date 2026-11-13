@@ -4,7 +4,7 @@ The data model, the Build scaling math, and the rules that tie recipes, versions
 Decisions this spec relies on are in [DECISIONS.md](DECISIONS.md); the visual flow is on the
 [whiteboard](https://claude.ai/artifact/61zJdqzBS9ijYNVLWx2RJt).
 
-_Status: draft for review — see [Open questions](#7-open-questions) before implementation._
+_Status: reviewed — open questions resolved (see [§7](#7-resolved-questions)). Ready to implement._
 
 ---
 
@@ -57,6 +57,7 @@ All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (ti
 |---|---|---|
 | id | UUID | |
 | number | Int = 1 | Next number within the recipe; never reused |
+| isFrozen | Bool (computed) | True once any bake of this version is `completed`. Frozen versions are read-only (§5.3) |
 | createdAt | Date | |
 | changeNote | String = "" | "What changed from the previous version" |
 | formula | Formula | Codable, §2.3 |
@@ -96,8 +97,7 @@ All percentages are **decimal fractions of total flour** (0.72 = 72%), where tot
 | hydration | Double | yes | Total water ÷ total flour, starter water included |
 | saltPct | Double | yes | |
 | starterPct | Double | yes | Starter mass ÷ total flour |
-| starterFlourParts | Double = 1 | yes | Starter ratio flour:water, e.g. 1:1, 1:5:5 → 1:1 |
-| starterWaterParts | Double = 1 | yes | |
+| starterHydration | Double = 1.0 | yes | Starter water ÷ starter flour (1.0 = 100%, 0.55 = a 55% biga). Any value ≥ 0 |
 | starterFlourType | String? | no | |
 | flours | [FlourComponent] | yes (≥ 1) | Blend of the **added** flour; shares sum to 1.0 |
 | adjuncts | [AdjunctComponent] = [] | no | |
@@ -113,8 +113,8 @@ Every field optional. These pre-fill the step screens.
 
 | Group | Fields |
 |---|---|
-| Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (atStart, afterAutolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (hand, slapAndFold, mixer, other), `mixDuration` or `mixFolds` |
-| Bulk | `strengthMethod` (slapAndFold, stretchAndFold, coilFold, none), `sets: Int?`, `setInterval: Duration?`, `targetRisePct: Double?`, `expectedDuration: Duration?` |
+| Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (withFirstMix = default, afterAutolyse; only asked when there is an autolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (hand, slapAndFold, mixer, other), `mixDuration` or `mixFolds` |
+| Bulk | `strengthMethod` (slapAndFold, stretchAndFold, coilFold, none), `sets: Int?`, `setInterval: Duration?`, `targetRise: Rise?`, `expectedDuration: Duration?` |
 | Shape | `finalShape` (boule, batard, banneton, loafPan, other + text) |
 | Proof | `proofDuration: Duration?`, `proofTempC: Double?`, `coldFerment: Bool`, `coldDuration: Duration?`, `coldTempC: Double?` |
 | Bake | `preheatTempC`, `vessel` (dutchOven, stone, steel, tray, other), `steam` (text), `coveredTempC`, `coveredDuration`, `uncoveredTempC`, `uncoveredDuration`, `scored: Bool?` |
@@ -142,14 +142,16 @@ Each log holds **actuals**. A field left `nil` means "as planned"; the summary s
 | Log | Fields |
 |---|---|
 | `MixLog` | `firstIn`, `starterTiming`, `autolyseStart/End: Date?`, `autolyseContents`, `mixMethod`, `mixDuration`/`mixFolds`, `addedNow` (salt, starter, other), `doughTempC` |
-| `BulkLog` | `start/end: Date`, `strengthMethod`, `sets`, `setInterval`, `roomTempC`, `doughTempStartC`, `doughTempReadings: [(Date, °C)]`, `targetRisePct`, `actualRisePct` |
+| `BulkLog` | `start/end: Date`, `strengthMethod`, `sets`, `setInterval`, `roomTempC`, `doughTempStartC`, `doughTempReadings: [(Date, °C)]`, `targetRise: Rise?`, `actualRise: Rise?` |
 | `ShapeLog` | `loaves: [LoafLog]` (weight g, finalShape, scored) — defaults to equal weights = bulk total ÷ loafCount |
-| `ProofLog` | `start/end: Date`, `roomTempC`, `risePct` |
+| `ProofLog` | `start/end: Date`, `roomTempC`, `rise: Rise?` |
 | `ColdLog` | `location` (fridge, other), `start/end: Date`, `tempC` |
 | `BakeLog` | `preheatTempC`, `vessel`, `steam`, covered temp/duration, uncovered temp/duration, `tempChanges: [String]`, `start/end: Date` |
 | `Evaluation` | Out of oven: `crustColour`, `ovenSpring` (1–10), `hasEar: Bool?`, `internalTempC`. Cooled: `crumb`, `crustTexture`, `flavour` (1–10), `coolingDuration`, `custom: [name: score]`. `overall` (1–10, required to finish), `worked`, `didnt`, `nextTime` (text) |
 
 `AdjunctAddition`: `name`, `grams`, `stage` (bulk, finalProof), `at: Date`. Logged during a bake, not part of the scaling.
+
+`Rise`: an enum of whole-step choices, `pct25, pct50, pct75, pct100, pct125, pct150`, plus `notMeasured`. Rise is judged by eye, so a picker beats a free number.
 
 Durations are computed from start/end timestamps wherever both exist; they are never stored separately.
 
@@ -167,7 +169,8 @@ A pure Swift module (`BakeMath`) with no UI or SwiftData dependency, fully unit 
 | h | Hydration (total water ÷ F) |
 | s | Salt % |
 | p | Starter % (starter mass ÷ F) |
-| φ | Starter flour fraction = flourParts ÷ (flourParts + waterParts). 1:1 → 0.5 |
+| hₛ | Starter hydration (starter water ÷ starter flour) |
+| φ | Starter flour fraction = 1 ÷ (1 + hₛ). 100% → 0.5; 55% → 0.645 |
 | A | Sum of adjunct percentages |
 | M | Total dough mass |
 
@@ -186,11 +189,11 @@ total mass     M  = F·(1 + h + s + A)
 
 Each added flour type gets `share × Fa`.
 
-Why total flour: it makes "overall hydration includes the starter's water" (whiteboard) exact, and `M = F(1 + h + s + A)` matches the whiteboard's solver formula.
+Why total flour: it is how the owner does the math by hand (calculate the whole build including the starter, then back out the starter's flour and water). It also makes "overall hydration includes the starter's water" (whiteboard) exact, and `M = F(1 + h + s + A)` matches the whiteboard's solver formula.
 
 ### 3.2 Solving from what the user knows
 
-The user's "flour" and "water" inputs mean **added** flour and **added** water, what they actually put on the scale. Salt %, starter % and ratio, and adjuncts always come from the formula.
+The user's "flour" and "water" inputs mean **added** flour and **added** water, what they actually put on the scale. Salt %, starter % and starter hydration, and adjuncts always come from the formula.
 
 | User gives | Solve |
 |---|---|
@@ -207,7 +210,7 @@ When a solve produces a hydration different from the version's, the bake is mark
 
 ### 3.3 Validation and conflicts
 
-- **Required inputs** (block Build if missing or ≤ 0): M or another pair from the table, each flour share, s ≥ 0, p ≥ 0, starter parts > 0, loafCount ≥ 1.
+- **Required inputs** (block Build if missing or ≤ 0): M or another pair from the table, each flour share, s ≥ 0, p ≥ 0, starter hydration ≥ 0, loafCount ≥ 1.
 - **Impossible results** (block with a message): Fa ≤ 0 (more starter flour than total flour); Wa < 0 ("the starter alone has more water than this hydration allows"); h outside 0.4–1.2 is a warning, not a block.
 - **Over-determined input**: if the user fills three of {M, Fa, Wa, h}, solve from each pair. If the results disagree by more than 1 g in any weight or 0.5 percentage points in h, show the conflict and ask which value to drop.
 
@@ -217,17 +220,17 @@ Calculate in `Double`; round only for display. Weights show as whole grams, exce
 
 ### 3.5 Reference cases (become unit tests)
 
-**A. Total + hydration.** M = 1000, h = 0.75, s = 0.02, p = 0.20, 1:1 starter, no adjuncts.
+**A. Total + hydration.** M = 1000, h = 0.75, s = 0.02, p = 0.20, starter at 100%, no adjuncts.
 F = 1000 ÷ 1.77 = 564.97 → S = 112.99 (Sf 56.50, Sw 56.50), Fa = 508.47, Wa = 367.23, salt = 11.30. Parts sum to 999.99 ✓
 
 **B. Whiteboard example.** M = 1200, h = 0.63, s = 0.02, p = 0, A = 0 → F = 727.27, water = 458.18, salt = 14.55.
 
-**C. Added flour + added water.** Fa = 500, Wa = 375, s = 0.02, p = 0.20, 1:1.
+**C. Added flour + added water.** Fa = 500, Wa = 375, s = 0.02, p = 0.20, starter at 100%.
 F = 500 ÷ 0.9 = 555.56; h = 375/555.56 + 0.1 = 0.775; S = 111.11; salt = 11.11; M = 997.22.
 
-**D. Stiff starter.** p = 0.20, ratio 2:1 (φ = 0.667), h = 0.70, Fa = 500 → F = 500 ÷ 0.8667 = 576.92; Sw = 38.46; Wa = 365.38.
+**D. Stiff biga at an odd hydration.** p = 0.20, hₛ = 0.55 (φ = 0.6452), h = 0.70, Fa = 500 → F = 500 ÷ 0.87097 = 574.07; S = 114.81 (Sf 74.07, Sw 40.74); Wa = 401.85 − 40.74 = 361.11. Check: F − Sf = 500 ✓
 
-**E. Impossible.** p = 1.0, ratio 1:1, h = 0.40 → Wa = F(0.40 − 0.50) < 0 → error.
+**E. Impossible.** p = 1.0, starter at 100%, h = 0.40 → Wa = F(0.40 − 0.50) < 0 → error.
 
 **F. Single-weight rescale.** From case A, set salt to 12 g → F = 600, everything rescales by 600/564.97.
 
@@ -260,20 +263,25 @@ build → mix → bulk → shape → proof → (cold)? → bake → evaluate →
 ### 5.1 One active bake
 Starting a bake while another is active asks to finish or abandon the active one first. Home shows the active bake; with none, it opens Recipes.
 
-### 5.2 Varying a recipe (at Build or any later step)
-Changing any formula or process value from the version's planned value:
-1. Applies to this bake right away (the bake's plan, or the step's actuals).
-2. Marks the bake `variesFromVersion`.
-3. The "save as…" question waits until the bake is complete (§5.3), so baking isn't interrupted.
+### 5.2 Variation vs. actuals
+Two different things, handled differently:
+- **A variation** is a deliberate change to a *planned* value: a different hydration at Build, a planned autolyse of 60 minutes instead of 30, starter after autolyse instead of with the first mix. The step screen marks it as a planned change (a "change plan" control, separate from logging). It updates the bake's plan and marks the bake `variesFromVersion`.
+- **An actual** is what happened: bulk ran 30 minutes long, the dough was 2 °F cooler. Actuals are logged against the plan and never make a new version.
 
-### 5.3 After a bake: update or save as new
-When a bake completes and it varied from its version, the app asks:
-- **Save as a new version** (default): creates version n+1 of the same recipe from the bake's plan plus its actuals, sets `derivedFrom`, and asks for a change note.
-- **Save as a new recipe**: same, but under a new recipe; `derivedFrom` links back for Compare.
-- **Update this version**: allowed only if no *other* completed bake uses this version. Otherwise this option is disabled with "Other bakes used this version; save a new one to keep comparisons accurate."
-- **Keep for this bake only**: nothing saved to recipes.
+The "save as…" question waits until the bake is complete (§5.3), so baking isn't interrupted.
 
-Whatever is chosen, the bake keeps its own plan and actuals.
+### 5.3 Frozen versions and new versions
+The goal is to fix a recipe, change one variable at a time, and compare the results, so a baked version must never change underneath its bakes.
+
+- **A version freezes** when its first bake is completed. From then on it is read-only. The version editor shows it locked, with "New version from this".
+- **A version with no completed bakes** can still be edited freely (for example, while setting up a recipe before the first bake).
+- **When a bake that varied completes**, the app asks:
+  - **Save as a new version** (default): version n+1 of the same recipe, built from the bake's plan, with `derivedFrom` set. It asks for a change note and pre-fills one from the diff ("Hydration 72% → 75%").
+  - **Save as a new recipe**: the same, but under a new recipe; `derivedFrom` links back for Compare.
+- **If the version was not yet frozen** (this was its first bake) the same two choices apply. The original stays as planned, and the bake moves to the new version so it's compared under the formula it actually used.
+- Abandoned bakes don't freeze a version and never prompt.
+
+A bake always keeps its own plan and actuals, whatever is chosen. (This rule may feel strict to other bakers; revisit before a public release, perhaps as a setting.)
 
 ### 5.4 Deleting
 - A version with bakes can't be deleted; archive the recipe instead.
@@ -304,15 +312,13 @@ Whatever is chosen, the bake keeps its own plan and actuals.
 
 ---
 
-## 7. Open questions
+## 7. Resolved questions
 
-Defaults are assumed above; confirm or change before implementation.
-
-1. **Percentage basis.** This spec measures every percentage against *total* flour (starter flour included). Many bakers write starter % against *added* flour instead ("20% starter" = 20% of the 500 g they weigh). Keep total-flour, or store against added flour and convert?
-2. **Starter ratio input.** Is flour:water parts (1:1, 2:1) enough, or do you also want a "starter hydration %" field (100%, 50%)? They are the same information.
-3. **Updating a version** (§5.3): is blocking updates once other bakes use the version the right rule?
-4. **Starter timing.** The whiteboard asks "starter and adjuncts: now or later?" in Mix. Is starter timing worth logging, or always "with the first mix"?
-5. **Rise %.** Bulk and proof rise are entered by eye. Is a number (%) right, or would choices (25 / 50 / 75 / 100%) be quicker?
+1. **Percentage basis:** total flour, starter flour included. This matches the owner's manual method: calculate the whole build, then back out the starter's flour and water (§3.1).
+2. **Starter input:** starter hydration as a percentage, not a parts ratio, so stiff starters and bigas at odd hydrations fit exactly (§2.3).
+3. **Version changes:** a version freezes after its first completed bake; any planned change then becomes a new version or recipe. There is no "update this version" and no "this bake only" (§5.3).
+4. **Starter timing:** stored in the version's process plan (default: with the first mix, before autolyse) and logged in Mix. Because it lives in the plan, it can be the single variable a new version tests (§2.4).
+5. **Rise:** picked from 25% steps or "not measured" (§2.6).
 
 ---
 
