@@ -59,7 +59,7 @@ _Last updated: 2026-11-13_
 
 ## Next steps
 
-1. Write `docs/SPEC.md`: entities and fields, planned vs. actual values, the Build solver formulas, and the rules for versions.
+1. ~~Write `docs/SPEC.md`~~ — drafted; see [SPEC.md](SPEC.md) and its open questions.
 2. Implement and test the scaling engine.
 3. Write the SwiftData models.
 4. Set up the Xcode project and build the screens in the order a bake happens.
