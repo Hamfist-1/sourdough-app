@@ -34,7 +34,8 @@ These apply to every `@Model` from day one, so iCloud sync can be switched on wi
 - No `@Attribute(.unique)`. Identity is a `UUID` field `id`, generated on creation.
 - Every relationship is optional and has an explicit inverse.
 - Deletes use `.cascade` from parent to children (Recipe → versions, version → bakes) only where stated; otherwise `.nullify`.
-- Step logs and formula details are stored as `Codable` structs on the model, not as separate models. This keeps the schema small and sync cheap; they are always read and written with their parent.
+- Step logs and formula details are `Codable` structs stored as JSON `Data` on the model, not as separate models. This keeps the schema small and sync cheap, and adding a field later needs no migration (every field in them is optional). They are always read and written with their parent.
+- Enums on models (status, current step) are stored as raw `String`s so they work in `#Predicate` queries.
 
 All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (timestamps). Display converts temperatures to °F/°C per the setting.
 
@@ -64,6 +65,7 @@ All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (ti
 | process | ProcessPlan | Codable, §2.4 |
 | recipe | Recipe? | inverse |
 | derivedFrom | RecipeVersion? | Set when created by "vary" or "save as new version"; nullify |
+| derivatives | [RecipeVersion]? | Inverse of `derivedFrom` (CloudKit needs every relationship to have one) |
 | bakes | [Bake]? | nullify (deleting a version is blocked while it has bakes) |
 
 **`Bake`** (`@Model`)
@@ -74,7 +76,7 @@ All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (ti
 | status | BakeStatus = .active | `active`, `completed`, `abandoned` |
 | startedAt | Date | |
 | endedAt | Date? | Set on complete or abandon |
-| currentStep | BakeStep = .build | §4 |
+| currentStep | BakeStep = .mix | §4. A bake is created when Build is confirmed, so it starts at `mix` |
 | version | RecipeVersion? | The version this bake started from |
 | plan | BakePlan | Codable snapshot, §2.5 |
 | mix | MixLog? | Codable, §2.6 |
@@ -82,7 +84,7 @@ All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (ti
 | shape | ShapeLog? | Divide + final shape |
 | proof | ProofLog? | Final proof |
 | cold | ColdLog? | Only if cold fermented |
-| bakeLog | BakeLog? | |
+| oven | OvenLog? | The Bake step's log |
 | evaluation | Evaluation? | |
 | additions | [AdjunctAddition] = [] | Ad-hoc adjuncts logged during the bake |
 
@@ -146,7 +148,7 @@ Each log holds **actuals**. A field left `nil` means "as planned"; the summary s
 | `ShapeLog` | `loaves: [LoafLog]` (weight g, finalShape, scored) — defaults to equal weights = bulk total ÷ loafCount |
 | `ProofLog` | `start/end: Date`, `roomTempC`, `rise: Rise?` |
 | `ColdLog` | `location` (fridge, other), `start/end: Date`, `tempC` |
-| `BakeLog` | `preheatTempC`, `vessel`, `steam`, covered temp/duration, uncovered temp/duration, `tempChanges: [String]`, `start/end: Date` |
+| `OvenLog` | `preheatTempC`, `vessel`, `steam`, covered temp/duration, uncovered temp/duration, `tempChanges: [String]`, `start/end: Date` |
 | `Evaluation` | Out of oven: `crustColour`, `ovenSpring` (1–10), `hasEar: Bool?`, `internalTempC`. Cooled: `crumb`, `crustTexture`, `flavour` (1–10), `coolingDuration`, `custom: [name: score]`. `overall` (1–10, required to finish), `worked`, `didnt`, `nextTime` (text) |
 
 `AdjunctAddition`: `name`, `grams`, `stage` (bulk, finalProof), `at: Date`. Logged during a bake, not part of the scaling.
@@ -278,7 +280,7 @@ The goal is to fix a recipe, change one variable at a time, and compare the resu
 - **When a bake that varied completes**, the app asks:
   - **Save as a new version** (default): version n+1 of the same recipe, built from the bake's plan, with `derivedFrom` set. It asks for a change note and pre-fills one from the diff ("Hydration 72% → 75%").
   - **Save as a new recipe**: the same, but under a new recipe; `derivedFrom` links back for Compare.
-- **If the version was not yet frozen** (this was its first bake) the same two choices apply. The original stays as planned, and the bake moves to the new version so it's compared under the formula it actually used.
+- **Either way, the bake moves to the new version**, so it is compared under the formula it actually used. The original version keeps only the bakes that followed it, and only freezes if one of those completes.
 - Abandoned bakes don't freeze a version and never prompt.
 
 A bake always keeps its own plan and actuals, whatever is chosen. (This rule may feel strict to other bakers; revisit before a public release, perhaps as a setting.)

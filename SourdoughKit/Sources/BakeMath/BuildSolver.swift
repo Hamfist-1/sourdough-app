@@ -31,12 +31,12 @@ public struct BuildInputs: Hashable, Sendable {
     }
 }
 
-public enum BuildInput: String, Hashable, Sendable, CaseIterable {
+public enum BuildInput: String, Codable, Hashable, Sendable, CaseIterable {
     case totalMass, addedFlour, addedWater, hydration
 }
 
 /// A single weight the user can edit after a build to rescale everything else.
-public enum Ingredient: Hashable, Sendable {
+public enum Ingredient: Codable, Hashable, Sendable {
     case totalMass, addedFlour, addedWater, salt, starter
     case flour(UUID)
     case adjunct(UUID)
@@ -44,25 +44,25 @@ public enum Ingredient: Hashable, Sendable {
 
 // MARK: - Results
 
-public struct IngredientWeight: Hashable, Sendable {
+public struct IngredientWeight: Codable, Hashable, Sendable {
     public let id: UUID
     public let name: String?
     public let grams: Double
 }
 
-public enum BuildSource: Hashable, Sendable {
+public enum BuildSource: Codable, Hashable, Sendable {
     /// Solved from what the user typed.
     case inputs(Set<BuildInput>)
     /// Rescaled from one edited weight.
     case rescaled(Ingredient)
 }
 
-public enum BuildWarning: Hashable, Sendable {
+public enum BuildWarning: Codable, Hashable, Sendable {
     case hydrationOutsideTypicalRange(Double)
 }
 
 /// Every weight for one build, in grams (unrounded). See docs/SPEC.md §3.1.
-public struct BuildResult: Hashable, Sendable {
+public struct BuildResult: Codable, Hashable, Sendable {
     public let totalFlour: Double
     public let hydration: Double
     public let addedFlour: Double
