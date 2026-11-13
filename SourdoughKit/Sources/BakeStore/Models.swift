@@ -141,6 +141,12 @@ public final class Bake {
         set { logsData = StoredJSON.encode(newValue) }
     }
 
+    /// Matches the active bake, for `@Query(filter: Bake.isActive)`.
+    public static var isActive: Predicate<Bake> {
+        let active = BakeStatus.active.rawValue
+        return #Predicate<Bake> { $0.statusRaw == active }
+    }
+
     /// True if the plan differs from the version it started from (a deliberate change). SPEC §5.2.
     public var variesFromVersion: Bool {
         guard let plan, let version else { return false }

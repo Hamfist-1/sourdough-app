@@ -84,8 +84,7 @@ public struct BakeService {
     // MARK: Bakes
 
     public func activeBake() throws -> Bake? {
-        let active = BakeStatus.active.rawValue
-        var descriptor = FetchDescriptor<Bake>(predicate: #Predicate { $0.statusRaw == active })
+        var descriptor = FetchDescriptor<Bake>(predicate: Bake.isActive)
         descriptor.fetchLimit = 1
         return try context.fetch(descriptor).first
     }

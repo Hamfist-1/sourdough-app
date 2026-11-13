@@ -10,6 +10,9 @@ public enum TemperatureUnit: String, Codable, Hashable, Sendable, CaseIterable {
 
     public var symbol: String { self == .celsius ? "°C" : "°F" }
 
+    /// "Fahrenheit (°F)"
+    public var name: String { self == .celsius ? "Celsius (°C)" : "Fahrenheit (°F)" }
+
     public func fromCelsius(_ celsius: Double) -> Double {
         self == .celsius ? celsius : celsius * 9 / 5 + 32
     }

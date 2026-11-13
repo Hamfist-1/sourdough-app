@@ -30,6 +30,19 @@ public enum BakeStep: String, Codable, Hashable, Sendable, CaseIterable, Compara
         }
     }
 
+    public var title: String {
+        switch self {
+        case .build: "Build"
+        case .mix: "Mix"
+        case .bulk: "Bulk ferment"
+        case .shape: "Shape"
+        case .proof: "Final proof"
+        case .cold: "Cold ferment"
+        case .bake: "Bake"
+        case .evaluate: "Evaluate"
+        }
+    }
+
     public static func < (a: BakeStep, b: BakeStep) -> Bool {
         allCases.firstIndex(of: a)! < allCases.firstIndex(of: b)!
     }

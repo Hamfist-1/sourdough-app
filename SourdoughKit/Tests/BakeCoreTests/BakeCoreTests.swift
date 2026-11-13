@@ -19,6 +19,7 @@ struct Steps {
         #expect(BakeStep.cold.next(coldFerment: true) == .bake)
         #expect(BakeStep.evaluate.next(coldFerment: true) == nil)
         #expect(BakeStep.mix < BakeStep.bake)
+        #expect(BakeStep.proof.title == "Final proof")
     }
 }
 
