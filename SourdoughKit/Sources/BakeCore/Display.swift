@@ -156,7 +156,8 @@ public enum ProcessSummary {
         let shape = items([("Final shape", p.finalShape?.label)])
 
         let proof = items([
-            ("Final proof", timeAt(p.proofDuration, p.proofTempC)),
+            ("Final proof", p.proofRise.map { "\($0.label) rise" }),
+            ("Proof time", timeAt(p.proofDuration, p.proofTempC)),
             ("Cold ferment", p.plansColdFerment ? (timeAt(p.coldDuration, p.coldTempC) ?? "yes") : nil),
         ])
 

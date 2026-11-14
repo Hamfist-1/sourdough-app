@@ -97,7 +97,7 @@ public struct ProofLog: Codable, Hashable, Sendable, TimedLog {
     public var start: Date?
     public var end: Date?
     public var roomTempC: Double?
-    @Lenient public var rise: Rise? = nil
+    @Lenient public var rise: ProofRise? = nil
 
     public init() {}
 }

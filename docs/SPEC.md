@@ -119,7 +119,7 @@ Every field optional. These pre-fill the step screens.
 | Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (withFirstMix = default, afterAutolyse; only asked when there is an autolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (by hand, machine), `mixDuration` |
 | Bulk | `strengthMethod` (slapAndFold, stretchAndFold, coilFold, none), `sets: Int?`, `setInterval: Duration?`, `targetRise: Rise?`, `expectedDuration: Duration?` |
 | Shape | `finalShape` (boule, batard, banneton, loafPan, other + text) |
-| Proof | `proofDuration: Duration?`, `proofTempC: Double?`, `coldFerment: Bool`, `coldDuration: Duration?`, `coldTempC: Double?` |
+| Proof | `proofRise: ProofRise?` (33, 50, 66 or 100% volume increase after shaping), `proofDuration: Duration?` (expected time, for the timer), `proofTempC: Double?`, `coldFerment: Bool`, `coldDuration: Duration?`, `coldTempC: Double?` |
 | Bake | `preheatTempC`, `vessel` (dutchOven, stone, steel, tray, other), `steam` (text), `coveredTempC`, `coveredDuration`, `uncoveredTempC`, `uncoveredDuration`, `scored: Bool?` |
 
 ### 2.5 `BakePlan` (Codable snapshot)
@@ -147,7 +147,7 @@ Each log holds **actuals**. A field left `nil` means "as planned"; the summary s
 | `MixLog` | `firstIn`, `starterTiming`, `autolyseStart/End: Date?`, `autolyseContents`, `mixMethod`, `mixDuration`, `addedNow` (salt, starter, other), `doughTempC` |
 | `BulkLog` | `start/end: Date`, `strengthMethod`, `sets`, `setInterval`, `roomTempC`, `doughTempStartC`, `doughTempReadings: [(Date, °C)]`, `targetRise: Rise?`, `actualRise: Rise?` |
 | `ShapeLog` | `loaves: [LoafLog]` (weight g, finalShape, scored) — defaults to equal weights = bulk total ÷ loafCount |
-| `ProofLog` | `start/end: Date`, `roomTempC`, `rise: Rise?` |
+| `ProofLog` | `start/end: Date`, `roomTempC`, `rise: ProofRise?` |
 | `ColdLog` | `location` (fridge, other), `start/end: Date`, `tempC` |
 | `OvenLog` | `preheatTempC`, `vessel`, `steam`, covered temp/duration, uncovered temp/duration, `tempChanges: [String]`, `start/end: Date` |
 | `Evaluation` | Out of oven: `crustColour`, `ovenSpring` (1–10), `hasEar: Bool?`, `internalTempC`. Cooled: `crumb`, `crustTexture`, `flavour` (1–10), `coolingDuration`, `custom: [name: score]`. `overall` (1–10, required to finish), `worked`, `didnt`, `nextTime` (text) |

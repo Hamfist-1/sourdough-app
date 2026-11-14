@@ -26,6 +26,9 @@ public struct ProcessPlan: Codable, Hashable, Sendable {
     @Lenient public var finalShape: FinalShape? = nil
 
     // Proof
+    /// Target volume increase after shaping.
+    @Lenient public var proofRise: ProofRise? = nil
+    /// Expected proof time (optional; drives the proof timer).
     public var proofDuration: TimeInterval?
     public var proofTempC: Double?
     public var coldFerment: Bool?

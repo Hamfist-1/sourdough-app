@@ -79,6 +79,26 @@ public enum Rise: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled
     public var label: String { percent.map { "\($0)%" } ?? "not measured" }
 }
 
+/// Final proof rise after shaping, judged by eye.
+public enum ProofRise: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled {
+    case pct33, pct50, pct66, pct100, notMeasured
+
+    public var percent: Int? {
+        switch self {
+        case .pct33: 33
+        case .pct50: 50
+        case .pct66: 66
+        case .pct100: 100
+        case .notMeasured: nil
+        }
+    }
+
+    public var label: String { percent.map { "\($0)%" } ?? "not measured" }
+
+    /// The choices for a plan's target (everything but "not measured").
+    public static var targets: [ProofRise] { allCases.filter { $0 != .notMeasured } }
+}
+
 public enum FirstIn: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
     public static var standardChoices: [FirstIn] { [.flourWater, .flourWaterSalt] }
 

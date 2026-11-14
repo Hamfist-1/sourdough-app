@@ -245,7 +245,9 @@ struct VersionEditorView: View {
 
     private var proofSection: some View {
         Section("Proof") {
-            NumberField(title: "Final proof", value: .hours($process.proofDuration), suffix: "h")
+            OptionalPicker(title: "Final proof rise", selection: $process.proofRise,
+                           options: ProofRise.targets, label: { $0.label })
+            NumberField(title: "Proof time", value: .hours($process.proofDuration), suffix: "h")
             NumberField(title: "Proof temp", value: .temperature($process.proofTempC, unit: unit), suffix: unit.symbol)
             Toggle("Cold ferment", isOn: coldFerment)
             if process.coldFerment == true {

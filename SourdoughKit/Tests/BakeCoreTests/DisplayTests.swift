@@ -64,11 +64,14 @@ struct ProcessSummaryTests {
         p.coldTempC = 4
         p.coveredDuration = 20 * 60
         p.coveredTempC = 250
+        p.proofRise = .pct66
+        p.proofDuration = 2 * 3600
         let sections = ProcessSummary.sections(p, unit: .fahrenheit)
         #expect(sections.map(\.title) == ["Mix", "Bulk ferment", "Proof", "Bake"])
         #expect(sections[0].items.map(\.value) == ["45 min", "with the first mix"])
         #expect(sections[1].items.first?.value == "4, every 30 min")
-        #expect(sections[2].items.first?.value == "12 h at 39°F")
+        #expect(sections[2].items.map(\.value) == ["66% rise", "2 h", "12 h at 39°F"])
+        #expect(ProofRise.targets.map(\.label) == ["33%", "50%", "66%", "100%"])
         #expect(sections[3].items.first?.value == "20 min at 482°F")
     }
 }
