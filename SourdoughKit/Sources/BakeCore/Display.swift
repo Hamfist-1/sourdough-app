@@ -162,12 +162,12 @@ public enum ProcessSummary {
         ])
 
         let bake = items([
+            ("Scored", p.scored.map { $0 ? "yes" : "no" }),
             ("Preheat", p.preheatTempC.map { unit.format(celsius: $0) }),
             ("Vessel", p.vessel?.label),
             ("Steam", p.steam),
             ("Covered", timeAt(p.coveredDuration, p.coveredTempC)),
             ("Uncovered", timeAt(p.uncoveredDuration, p.uncoveredTempC)),
-            ("Scored", p.scored.map { $0 ? "yes" : "no" }),
         ])
 
         return [("Mix", mix), ("Bulk ferment", bulk), ("Shape", shape), ("Proof", proof), ("Bake", bake)]

@@ -257,8 +257,13 @@ struct VersionEditorView: View {
         }
     }
 
+    private var scored: Binding<Bool> {
+        Binding(get: { process.scored ?? false }, set: { process.scored = $0 })
+    }
+
     private var bakeSection: some View {
         Section("Bake") {
+            Toggle("Scored", isOn: scored)
             NumberField(title: "Preheat", value: .temperature($process.preheatTempC, unit: unit), suffix: unit.symbol)
             ChoicePicker(title: "Vessel", selection: $process.vessel)
             TextField("Steam (e.g. lid on, ice cubes)", text: .optional($process.steam))
@@ -266,8 +271,6 @@ struct VersionEditorView: View {
             NumberField(title: "Covered temp", value: .temperature($process.coveredTempC, unit: unit), suffix: unit.symbol)
             NumberField(title: "Uncovered", value: .minutes($process.uncoveredDuration), suffix: "min")
             NumberField(title: "Uncovered temp", value: .temperature($process.uncoveredTempC, unit: unit), suffix: unit.symbol)
-            OptionalPicker(title: "Scored", selection: $process.scored,
-                           options: [true, false], label: { $0 ? "Yes" : "No" })
         }
     }
 
