@@ -31,6 +31,7 @@ struct RecipeDetailView: View {
                 bakes(version)
             }
         }
+        .keyboardDoneButton()
         .navigationTitle(recipe.name)
         .toolbar {
             if recipe.sortedVersions.count > 1 {

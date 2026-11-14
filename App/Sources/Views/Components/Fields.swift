@@ -156,3 +156,25 @@ struct ChoicePicker<T: OtherChoice>: View {
         }
     }
 }
+
+// MARK: - Keyboard
+
+extension View {
+    /// Adds a Done button above the keyboard (the number pad has no return key) and lets
+    /// scrolling dismiss it. Apply once per screen, on the Form or List.
+    func keyboardDoneButton() -> some View {
+        self
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+                        )
+                    }
+                    .bold()
+                }
+            }
+    }
+}

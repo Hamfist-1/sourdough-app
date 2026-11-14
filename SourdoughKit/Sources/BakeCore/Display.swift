@@ -221,3 +221,38 @@ public extension BuildInput {
         }
     }
 }
+
+// MARK: - Starter in grams
+
+/// Converts between starter % and grams of starter in a dough of a given weight, so the
+/// version editor can take the starter either way. The recipe always stores the %.
+public enum StarterAmount {
+    /// Total flour in a dough of `doughMass`. Doesn't depend on the starter %.
+    public static func totalFlour(_ f: Formula, doughMass: Double) -> Double {
+        doughMass / (1 + f.hydration + f.saltPct + f.adjunctPct)
+    }
+
+    /// Grams of starter in a dough of `doughMass`.
+    public static func grams(_ f: Formula, doughMass: Double) -> Double {
+        f.starterPct * totalFlour(f, doughMass: doughMass)
+    }
+
+    /// The starter % that puts `grams` of starter in a dough of `doughMass`.
+    public static func percent(grams: Double, _ f: Formula, doughMass: Double) -> Double {
+        let flour = totalFlour(f, doughMass: doughMass)
+        return flour > 0 ? grams / flour : 0
+    }
+
+    /// How much of `grams` of starter is flour and how much is water.
+    public static func split(grams: Double, starterHydration: Double) -> (flour: Double, water: Double) {
+        let flour = grams / (1 + starterHydration)
+        return (flour, grams - flour)
+    }
+
+    /// "200 g starter = 100 g flour + 100 g water"
+    public static func description(grams: Double, starterHydration: Double) -> String {
+        let parts = split(grams: grams, starterHydration: starterHydration)
+        func g(_ x: Double) -> String { Format.number(WeightDisplay.rounded(x)) + " g" }
+        return "\(g(grams)) starter = \(g(parts.flour)) flour + \(g(parts.water)) water"
+    }
+}

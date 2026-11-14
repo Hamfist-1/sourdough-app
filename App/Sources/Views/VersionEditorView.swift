@@ -10,6 +10,7 @@ struct VersionEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @AppStorage("temperatureUnit") private var unit: TemperatureUnit = .default
+    @AppStorage("starterInGrams") private var starterInGrams = false
 
     let recipe: Recipe
     let version: RecipeVersion
@@ -20,6 +21,10 @@ struct VersionEditorView: View {
     @State private var formula: Formula
     @State private var process: ProcessPlan
     @State private var errorMessage: String?
+    /// The dough weight that starter grams are measured against.
+    @State private var referenceMass: Double?
+    /// Autolyse yes/no. The duration is only asked for when it's on.
+    @State private var autolyseOn: Bool
 
     init(recipe: Recipe, version: RecipeVersion) {
         self.recipe = recipe
@@ -29,12 +34,15 @@ struct VersionEditorView: View {
         _changeNote = State(initialValue: version.changeNote)
         _formula = State(initialValue: version.formula)
         _process = State(initialValue: version.process)
+        _referenceMass = State(initialValue: version.completedBakes.last?.plan?.targetMass ?? 1000)
+        _autolyseOn = State(initialValue: version.process.autolyse != nil)
     }
 
     var body: some View {
         Form {
             recipeSection
             formulaSection
+            starterSection
             floursSection
             adjunctsSection
             mixSection
@@ -43,6 +51,7 @@ struct VersionEditorView: View {
             proofSection
             bakeSection
         }
+        .keyboardDoneButton()
         .navigationTitle("Version \(version.number)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -79,13 +88,50 @@ struct VersionEditorView: View {
         Section {
             NumberField(title: "Hydration", value: .percent($formula.hydration), suffix: "%")
             NumberField(title: "Salt", value: .percent($formula.saltPct), suffix: "%")
-            NumberField(title: "Starter", value: .percent($formula.starterPct), suffix: "%")
-            NumberField(title: "Starter hydration", value: .percent($formula.starterHydration), suffix: "%")
-            TextField("Starter flour (optional)", text: .optional($formula.starterFlourType))
         } header: {
             Text("Formula")
         } footer: {
             Text("Percentages are of total flour, including the flour in the starter. Hydration counts the starter's water.")
+        }
+    }
+
+    private var mass: Double { max(referenceMass ?? 0, 0) }
+
+    /// Starter typed as grams in a dough of `referenceMass`; stored as a %.
+    private var starterGrams: Binding<Double?> {
+        Binding(
+            get: { mass > 0 ? StarterAmount.grams(formula, doughMass: mass) : nil },
+            set: { grams in
+                if let grams, mass > 0 {
+                    formula.starterPct = StarterAmount.percent(grams: grams, formula, doughMass: mass)
+                }
+            }
+        )
+    }
+
+    private var starterSection: some View {
+        Section {
+            Picker("Enter starter as", selection: $starterInGrams) {
+                Text("%").tag(false)
+                Text("Grams").tag(true)
+            }
+            .pickerStyle(.segmented)
+
+            if starterInGrams {
+                NumberField(title: "Starter", value: starterGrams, suffix: "g")
+                NumberField(title: "In a dough of", value: $referenceMass, suffix: "g")
+                LabeledContent("Starter %", value: Format.percent(formula.starterPct))
+            } else {
+                NumberField(title: "Starter", value: .percent($formula.starterPct), suffix: "%")
+            }
+            NumberField(title: "Starter hydration", value: .percent($formula.starterHydration), suffix: "%")
+            TextField("Starter flour (optional)", text: .optional($formula.starterFlourType))
+        } header: {
+            Text("Starter")
+        } footer: {
+            if mass > 0 {
+                Text("In a \(Format.number(mass.rounded())) g dough: \(StarterAmount.description(grams: StarterAmount.grams(formula, doughMass: mass), starterHydration: formula.starterHydration)).")
+            }
         }
     }
 
@@ -163,8 +209,9 @@ struct VersionEditorView: View {
     private var mixSection: some View {
         Section("Mix") {
             ChoicePicker(title: "First in", selection: $process.firstIn)
-            NumberField(title: "Autolyse", value: .minutes($process.autolyse), suffix: "min", prompt: "none")
-            if process.autolyse != nil {
+            Toggle("Autolyse", isOn: $autolyseOn)
+            if autolyseOn {
+                NumberField(title: "Autolyse time", value: .minutes($process.autolyse), suffix: "min")
                 OptionalPicker(title: "Starter added", selection: $process.starterTiming,
                                options: StarterTiming.allCases, label: { $0.label })
             }
@@ -238,7 +285,15 @@ struct VersionEditorView: View {
             errorMessage = "Give each adjunct a name."
             return
         }
-        if process.autolyse == 0 { process.autolyse = nil }
+        if autolyseOn {
+            guard let minutes = process.autolyse, minutes > 0 else {
+                errorMessage = "Enter how long the autolyse is, or switch it off."
+                return
+            }
+        } else {
+            process.autolyse = nil
+            process.starterTiming = nil
+        }
 
         do {
             try BuildSolver.validate(cleaned)

@@ -87,3 +87,26 @@ struct OtherChoiceTests {
         #expect(BuildError.flourSharesMustSumToOne(0.9).message.contains("90%"))
     }
 }
+
+@Suite("Starter in grams")
+struct StarterAmountTests {
+    @Test("Your example: 200 g at 100% is 100 g flour + 100 g water")
+    func split() {
+        let parts = StarterAmount.split(grams: 200, starterHydration: 1.0)
+        #expect(parts.flour == 100 && parts.water == 100)
+        #expect(StarterAmount.description(grams: 200, starterHydration: 1.0) == "200 g starter = 100 g flour + 100 g water")
+        #expect(StarterAmount.description(grams: 155, starterHydration: 0.55) == "155 g starter = 100 g flour + 55 g water")
+    }
+
+    @Test("Grams and % convert both ways and agree with the solver")
+    func roundTrip() throws {
+        var f = Formula(hydration: 0.75, saltPct: 0.02, starterPct: 0.20)
+        #expect(abs(StarterAmount.grams(f, doughMass: 1000) - 112.99) < 0.01)
+
+        f.starterPct = StarterAmount.percent(grams: 200, f, doughMass: 1000)
+        let r = try BuildSolver.solve(f, BuildInputs(totalMass: 1000))
+        #expect(abs(r.starter - 200) < 1e-9)
+        #expect(abs(r.starterFlour - 100) < 1e-9)
+        #expect(abs(r.totalMass - 1000) < 1e-9)
+    }
+}

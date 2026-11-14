@@ -83,6 +83,7 @@ struct BuildView: View {
                 result(plan)
             }
         }
+        .keyboardDoneButton()
         .navigationTitle("Build")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Can't start the bake", isPresented: Binding(
