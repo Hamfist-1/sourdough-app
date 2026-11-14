@@ -111,23 +111,13 @@ public enum StarterTiming: String, Codable, Hashable, Sendable, CaseIterable, Pl
     }
 }
 
-public enum MixMethod: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
-    public static var standardChoices: [MixMethod] { [.hand, .slapAndFold, .mixer] }
-
-    public var otherText: String? {
-        if case .other(let text) = self { return text }
-        return nil
-    }
-
-    case hand, slapAndFold, mixer
-    case other(String)
+public enum MixMethod: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled {
+    case hand, machine
 
     public var label: String {
         switch self {
         case .hand: "by hand"
-        case .slapAndFold: "slap and fold"
-        case .mixer: "mixer"
-        case .other(let text): text
+        case .machine: "machine"
         }
     }
 }

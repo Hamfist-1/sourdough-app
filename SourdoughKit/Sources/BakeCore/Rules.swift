@@ -134,10 +134,12 @@ public enum PlanDiff {
         let left = Mirror(reflecting: a).children
         let right = Array(Mirror(reflecting: b).children)
         var result: [PlanChange] = []
+        func unboxed(_ any: Any) -> Any { (any as? LenientBox).map { $0.boxedValue as Any } ?? any }
         for (index, child) in left.enumerated() {
-            guard let label = child.label else { continue }
-            let x = value(label, child.value)
-            let y = value(label, right[index].value)
+            guard var label = child.label else { continue }
+            if label.hasPrefix("_") { label.removeFirst() }
+            let x = value(label, unboxed(child.value))
+            let y = value(label, unboxed(right[index].value))
             if x != y { result.append(PlanChange(field: humanize(label), from: x, to: y)) }
         }
         return result

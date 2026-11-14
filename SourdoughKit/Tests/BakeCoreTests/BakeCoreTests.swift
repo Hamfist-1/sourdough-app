@@ -101,6 +101,12 @@ struct ChangeNotes {
         #expect(PlanDiff.humanize("setInterval") == "Set interval")
         #expect(PlanDiff.humanize("autolyse") == "Autolyse")
         #expect(PlanDiff.humanize("strengthMethod") == "Folds")
+        var a = ProcessPlan(), b = ProcessPlan()
+        a.strengthMethod = .stretchAndFold
+        b.strengthMethod = .coilFold
+        b.mixMethod = .machine
+        #expect(PlanDiff.changeNote(PlanDiff.changes(from: (formula, a), to: (formula, b)), unit: .fahrenheit)
+                == "Mix method none → machine; Folds stretch and fold → coil fold")
     }
 }
 
@@ -158,7 +164,7 @@ struct Storage {
     @Test func logsSurviveJSON() {
         var logs = BakeLogs()
         var mix = MixLog()
-        mix.mixMethod = .other("stand mixer, dough hook")
+        mix.mixMethod = .machine
         mix.addedNow = ["salt"]
         logs.mix = mix
         logs.shape = .equalLoaves(totalWeight: 1000, count: 2, shape: .other("couronne"))
@@ -169,6 +175,23 @@ struct Storage {
     @Test func emptyOrBadDataDecodesToNil() {
         #expect(StoredJSON.decode(BakeLogs.self, from: Data()) == nil)
         #expect(StoredJSON.decode(BakeLogs.self, from: Data("nope".utf8)) == nil)
+    }
+
+    @Test("A choice that no longer exists reads as not set; the rest is kept")
+    func removedChoiceIsDropped() throws {
+        let old = #"{"mixMethod":{"slapAndFold":{}},"autolyse":1800,"vessel":{"dutchOven":{}}}"#
+        let plan = try #require(StoredJSON.decode(ProcessPlan.self, from: Data(old.utf8)))
+        #expect(plan.mixMethod == nil)
+        #expect(plan.autolyse == 1800)
+        #expect(plan.vessel == .dutchOven)
+    }
+
+    @Test("Unset choices are left out of stored JSON")
+    func nilChoicesOmitted() {
+        #expect(String(decoding: StoredJSON.encode(ProcessPlan()), as: UTF8.self) == "{}")
+        var p = ProcessPlan()
+        p.mixMethod = .hand
+        #expect(String(decoding: StoredJSON.encode(p), as: UTF8.self) == #"{"mixMethod":"hand"}"#)
     }
 
     @Test func olderDataWithFewerFieldsStillDecodes() {

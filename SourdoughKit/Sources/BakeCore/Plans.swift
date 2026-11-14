@@ -7,23 +7,23 @@ import BakeMath
 /// All optional so stored JSON keeps decoding as fields are added later.
 public struct ProcessPlan: Codable, Hashable, Sendable {
     // Mix
-    public var firstIn: FirstIn?
+    @Lenient public var firstIn: FirstIn? = nil
     /// nil means the default, `withFirstMix`. Only asked when there is an autolyse.
-    public var starterTiming: StarterTiming?
+    @Lenient public var starterTiming: StarterTiming? = nil
     /// Autolyse length in seconds. nil = no autolyse.
     public var autolyse: TimeInterval?
-    public var mixMethod: MixMethod?
+    @Lenient public var mixMethod: MixMethod? = nil
     public var mixDuration: TimeInterval?
 
     // Bulk
-    public var strengthMethod: StrengthMethod?
+    @Lenient public var strengthMethod: StrengthMethod? = nil
     public var sets: Int?
     public var setInterval: TimeInterval?
-    public var targetRise: Rise?
+    @Lenient public var targetRise: Rise? = nil
     public var bulkDuration: TimeInterval?
 
     // Shape
-    public var finalShape: FinalShape?
+    @Lenient public var finalShape: FinalShape? = nil
 
     // Proof
     public var proofDuration: TimeInterval?
@@ -34,7 +34,7 @@ public struct ProcessPlan: Codable, Hashable, Sendable {
 
     // Bake
     public var preheatTempC: Double?
-    public var vessel: Vessel?
+    @Lenient public var vessel: Vessel? = nil
     public var steam: String?
     public var coveredTempC: Double?
     public var coveredDuration: TimeInterval?

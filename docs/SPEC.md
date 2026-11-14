@@ -36,6 +36,7 @@ These apply to every `@Model` from day one, so iCloud sync can be switched on wi
 - Deletes use `.cascade` from parent to children (Recipe → versions, version → bakes) only where stated; otherwise `.nullify`.
 - Step logs and formula details are `Codable` structs stored as JSON `Data` on the model, not as separate models. This keeps the schema small and sync cheap, and adding a field later needs no migration (every field in them is optional). They are always read and written with their parent.
 - Enums on models (status, current step) are stored as raw `String`s so they work in `#Predicate` queries.
+- Choice fields inside plans and logs (mix method, folds, rise, shape, vessel…) load leniently: a stored choice that no longer exists reads as "not set" and the rest of the record is kept, so choice lists can change without migrations.
 
 All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (timestamps). Display converts temperatures to °F/°C per the setting.
 
@@ -115,7 +116,7 @@ Every field optional. These pre-fill the step screens.
 
 | Group | Fields |
 |---|---|
-| Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (withFirstMix = default, afterAutolyse; only asked when there is an autolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (hand, slapAndFold, mixer, other), `mixDuration` |
+| Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (withFirstMix = default, afterAutolyse; only asked when there is an autolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (by hand, machine), `mixDuration` |
 | Bulk | `strengthMethod` (slapAndFold, stretchAndFold, coilFold, none), `sets: Int?`, `setInterval: Duration?`, `targetRise: Rise?`, `expectedDuration: Duration?` |
 | Shape | `finalShape` (boule, batard, banneton, loafPan, other + text) |
 | Proof | `proofDuration: Duration?`, `proofTempC: Double?`, `coldFerment: Bool`, `coldDuration: Duration?`, `coldTempC: Double?` |

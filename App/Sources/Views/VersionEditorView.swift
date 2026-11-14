@@ -215,7 +215,8 @@ struct VersionEditorView: View {
                 OptionalPicker(title: "Starter added", selection: $process.starterTiming,
                                options: StarterTiming.allCases, label: { $0.label })
             }
-            ChoicePicker(title: "Mix method", selection: $process.mixMethod)
+            OptionalPicker(title: "Mix method", selection: $process.mixMethod,
+                           options: MixMethod.allCases, label: { $0.label.prefix(1).uppercased() + $0.label.dropFirst() })
             NumberField(title: "Mix time", value: .minutes($process.mixDuration), suffix: "min")
         }
     }

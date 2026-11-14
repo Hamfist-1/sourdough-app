@@ -29,12 +29,12 @@ public struct TempReading: Codable, Hashable, Sendable {
 }
 
 public struct MixLog: Codable, Hashable, Sendable {
-    public var firstIn: FirstIn?
-    public var starterTiming: StarterTiming?
+    @Lenient public var firstIn: FirstIn? = nil
+    @Lenient public var starterTiming: StarterTiming? = nil
     public var autolyseStart: Date?
     public var autolyseEnd: Date?
     public var autolyseContents: String?
-    public var mixMethod: MixMethod?
+    @Lenient public var mixMethod: MixMethod? = nil
     public var mixDuration: TimeInterval?
     /// What went in after autolyse (salt, starter, other).
     public var addedNow: [String]?
@@ -51,14 +51,14 @@ public struct MixLog: Codable, Hashable, Sendable {
 public struct BulkLog: Codable, Hashable, Sendable, TimedLog {
     public var start: Date?
     public var end: Date?
-    public var strengthMethod: StrengthMethod?
+    @Lenient public var strengthMethod: StrengthMethod? = nil
     public var sets: Int?
     public var setInterval: TimeInterval?
     public var roomTempC: Double?
     public var doughTempStartC: Double?
     public var doughTempReadings: [TempReading]?
-    public var targetRise: Rise?
-    public var actualRise: Rise?
+    @Lenient public var targetRise: Rise? = nil
+    @Lenient public var actualRise: Rise? = nil
 
     public init() {}
 }
@@ -66,7 +66,7 @@ public struct BulkLog: Codable, Hashable, Sendable, TimedLog {
 public struct LoafLog: Codable, Hashable, Sendable, Identifiable {
     public var id: UUID
     public var weight: Double?
-    public var finalShape: FinalShape?
+    @Lenient public var finalShape: FinalShape? = nil
     public var scored: Bool?
 
     public init(id: UUID = UUID(), weight: Double? = nil, finalShape: FinalShape? = nil, scored: Bool? = nil) {
@@ -97,13 +97,13 @@ public struct ProofLog: Codable, Hashable, Sendable, TimedLog {
     public var start: Date?
     public var end: Date?
     public var roomTempC: Double?
-    public var rise: Rise?
+    @Lenient public var rise: Rise? = nil
 
     public init() {}
 }
 
 public struct ColdLog: Codable, Hashable, Sendable, TimedLog {
-    public var location: ColdLocation?
+    @Lenient public var location: ColdLocation? = nil
     public var start: Date?
     public var end: Date?
     public var tempC: Double?
@@ -114,7 +114,7 @@ public struct ColdLog: Codable, Hashable, Sendable, TimedLog {
 /// The Bake step's log (called `BakeLog` in the spec; renamed to avoid confusion with the `Bake` model).
 public struct OvenLog: Codable, Hashable, Sendable, TimedLog {
     public var preheatTempC: Double?
-    public var vessel: Vessel?
+    @Lenient public var vessel: Vessel? = nil
     public var steam: String?
     public var coveredTempC: Double?
     public var coveredDuration: TimeInterval?
