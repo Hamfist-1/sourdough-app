@@ -228,7 +228,7 @@ struct VersionEditorView: View {
             NumberField(title: "Sets", value: .whole($process.sets))
             NumberField(title: "Between sets", value: .minutes($process.setInterval), suffix: "min")
             OptionalPicker(title: "Target rise", selection: $process.targetRise,
-                           options: Rise.allCases.filter { $0 != .notMeasured }, label: { $0.label })
+                           options: Rise.targets, label: { $0.label })
             NumberField(title: "Expected time", value: .hours($process.bulkDuration), suffix: "h")
         }
     }
@@ -246,7 +246,7 @@ struct VersionEditorView: View {
     private var proofSection: some View {
         Section("Proof") {
             OptionalPicker(title: "Final proof rise", selection: $process.proofRise,
-                           options: ProofRise.targets, label: { $0.label })
+                           options: Rise.targets, label: { $0.label })
             NumberField(title: "Proof time", value: .hours($process.proofDuration), suffix: "h")
             NumberField(title: "Proof temp", value: .temperature($process.proofTempC, unit: unit), suffix: unit.symbol)
             Toggle("Cold ferment", isOn: coldFerment)

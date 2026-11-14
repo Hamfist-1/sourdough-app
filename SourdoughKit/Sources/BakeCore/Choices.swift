@@ -60,7 +60,7 @@ public enum BakeStep: String, Codable, Hashable, Sendable, CaseIterable, Compara
     }
 }
 
-/// Rise judged by eye, in 25% steps. SPEC §2.6.
+/// Rise judged by eye, in 25% steps. Used for both bulk and final proof. SPEC §2.6.
 public enum Rise: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled {
     case pct25, pct50, pct75, pct100, pct125, pct150, notMeasured
 
@@ -77,26 +77,9 @@ public enum Rise: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled
     }
 
     public var label: String { percent.map { "\($0)%" } ?? "not measured" }
-}
-
-/// Final proof rise after shaping, judged by eye.
-public enum ProofRise: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled {
-    case pct33, pct50, pct66, pct100, notMeasured
-
-    public var percent: Int? {
-        switch self {
-        case .pct33: 33
-        case .pct50: 50
-        case .pct66: 66
-        case .pct100: 100
-        case .notMeasured: nil
-        }
-    }
-
-    public var label: String { percent.map { "\($0)%" } ?? "not measured" }
 
     /// The choices for a plan's target (everything but "not measured").
-    public static var targets: [ProofRise] { allCases.filter { $0 != .notMeasured } }
+    public static var targets: [Rise] { allCases.filter { $0 != .notMeasured } }
 }
 
 public enum FirstIn: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
