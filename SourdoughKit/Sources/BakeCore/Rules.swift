@@ -167,8 +167,12 @@ public enum PlanDiff {
         return mirror.children.first.map(\.value)
     }
 
+    /// Field names that read better under a baker's term.
+    static let fieldNames = ["strengthMethod": "Folds", "bulkDuration": "Bulk time"]
+
     /// "proofTempC" → "Proof temp", "setInterval" → "Set interval".
     static func humanize(_ label: String) -> String {
+        if let name = fieldNames[label] { return name }
         var name = label
         if name.hasSuffix("TempC") { name.removeLast() }
         var words = ""

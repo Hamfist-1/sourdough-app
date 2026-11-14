@@ -217,13 +217,12 @@ struct VersionEditorView: View {
             }
             ChoicePicker(title: "Mix method", selection: $process.mixMethod)
             NumberField(title: "Mix time", value: .minutes($process.mixDuration), suffix: "min")
-            NumberField(title: "Folds", value: .whole($process.mixFolds))
         }
     }
 
     private var bulkSection: some View {
         Section("Bulk ferment") {
-            OptionalPicker(title: "Strength", selection: $process.strengthMethod,
+            OptionalPicker(title: "Folds", selection: $process.strengthMethod,
                            options: StrengthMethod.allCases, label: { $0.label })
             NumberField(title: "Sets", value: .whole($process.sets))
             NumberField(title: "Between sets", value: .minutes($process.setInterval), suffix: "min")

@@ -36,7 +36,6 @@ public struct MixLog: Codable, Hashable, Sendable {
     public var autolyseContents: String?
     public var mixMethod: MixMethod?
     public var mixDuration: TimeInterval?
-    public var mixFolds: Int?
     /// What went in after autolyse (salt, starter, other).
     public var addedNow: [String]?
     public var doughTempC: Double?

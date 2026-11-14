@@ -100,6 +100,7 @@ struct ChangeNotes {
         #expect(PlanDiff.humanize("proofTempC") == "Proof temp")
         #expect(PlanDiff.humanize("setInterval") == "Set interval")
         #expect(PlanDiff.humanize("autolyse") == "Autolyse")
+        #expect(PlanDiff.humanize("strengthMethod") == "Folds")
     }
 }
 

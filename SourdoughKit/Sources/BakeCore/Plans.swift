@@ -14,7 +14,6 @@ public struct ProcessPlan: Codable, Hashable, Sendable {
     public var autolyse: TimeInterval?
     public var mixMethod: MixMethod?
     public var mixDuration: TimeInterval?
-    public var mixFolds: Int?
 
     // Bulk
     public var strengthMethod: StrengthMethod?

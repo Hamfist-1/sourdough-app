@@ -138,7 +138,6 @@ public enum ProcessSummary {
             ("Starter added", p.autolyse != nil ? p.effectiveStarterTiming.label : nil),
             ("Mix method", p.mixMethod?.label),
             ("Mix time", p.mixDuration.map(Format.duration)),
-            ("Folds", p.mixFolds.map(String.init)),
         ])
 
         let sets: String? = switch (p.sets, p.setInterval) {
@@ -148,7 +147,7 @@ public enum ProcessSummary {
         default: nil
         }
         let bulk = items([
-            ("Strength", p.strengthMethod?.label),
+            ("Folds", p.strengthMethod?.label),
             ("Sets", sets),
             ("Target rise", p.targetRise?.label),
             ("Expected time", p.bulkDuration.map(Format.duration)),

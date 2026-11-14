@@ -115,7 +115,7 @@ Every field optional. These pre-fill the step screens.
 
 | Group | Fields |
 |---|---|
-| Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (withFirstMix = default, afterAutolyse; only asked when there is an autolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (hand, slapAndFold, mixer, other), `mixDuration` or `mixFolds` |
+| Mix | `firstIn` (flourWater, flourWaterSalt, other + text), `starterTiming` (withFirstMix = default, afterAutolyse; only asked when there is an autolyse), `autolyse: Duration?` (nil = no autolyse), `mixMethod` (hand, slapAndFold, mixer, other), `mixDuration` |
 | Bulk | `strengthMethod` (slapAndFold, stretchAndFold, coilFold, none), `sets: Int?`, `setInterval: Duration?`, `targetRise: Rise?`, `expectedDuration: Duration?` |
 | Shape | `finalShape` (boule, batard, banneton, loafPan, other + text) |
 | Proof | `proofDuration: Duration?`, `proofTempC: Double?`, `coldFerment: Bool`, `coldDuration: Duration?`, `coldTempC: Double?` |
@@ -143,7 +143,7 @@ Each log holds **actuals**. A field left `nil` means "as planned"; the summary s
 
 | Log | Fields |
 |---|---|
-| `MixLog` | `firstIn`, `starterTiming`, `autolyseStart/End: Date?`, `autolyseContents`, `mixMethod`, `mixDuration`/`mixFolds`, `addedNow` (salt, starter, other), `doughTempC` |
+| `MixLog` | `firstIn`, `starterTiming`, `autolyseStart/End: Date?`, `autolyseContents`, `mixMethod`, `mixDuration`, `addedNow` (salt, starter, other), `doughTempC` |
 | `BulkLog` | `start/end: Date`, `strengthMethod`, `sets`, `setInterval`, `roomTempC`, `doughTempStartC`, `doughTempReadings: [(Date, °C)]`, `targetRise: Rise?`, `actualRise: Rise?` |
 | `ShapeLog` | `loaves: [LoafLog]` (weight g, finalShape, scored) — defaults to equal weights = bulk total ÷ loafCount |
 | `ProofLog` | `start/end: Date`, `roomTempC`, `rise: Rise?` |
