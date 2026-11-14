@@ -41,6 +41,9 @@ public struct Formula: Codable, Hashable, Sendable {
     /// 1 − φ: the fraction of the starter that is water.
     public var starterWaterFraction: Double { starterHydration / (1 + starterHydration) }
 
+    /// A formula has at least one flour and at most three.
+    public static let flourCountLimit = 1...3
+
     /// A: the sum of all adjunct percentages, whatever stage they're added in.
     public var adjunctPct: Double { adjuncts.reduce(0) { $0 + $1.pct } }
 }

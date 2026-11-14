@@ -101,7 +101,7 @@ All percentages are **decimal fractions of total flour** (0.72 = 72%), where tot
 | starterPct | Double | yes | Starter mass ÷ total flour |
 | starterHydration | Double = 1.0 | yes | Starter water ÷ starter flour (1.0 = 100%, 0.55 = a 55% biga). Any value ≥ 0 |
 | starterFlourType | String? | no | |
-| flours | [FlourComponent] | yes (≥ 1) | Blend of the **added** flour; shares sum to 1.0 |
+| flours | [FlourComponent] | yes (1 to 3) | Blend of the **added** flour; shares sum to 1.0 |
 | adjuncts | [AdjunctComponent] = [] | no | |
 
 `FlourComponent`: `type: String?` (white AP, whole wheat…), `share: Double` (fraction of added flour).

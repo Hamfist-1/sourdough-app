@@ -8,6 +8,18 @@ public protocol PlanLabeled {
     var label: String { get }
 }
 
+/// A choice with fixed options plus "other" with the user's own text.
+public protocol OtherChoice: Hashable, PlanLabeled {
+    static var standardChoices: [Self] { get }
+    static func other(_ text: String) -> Self
+    /// The user's text when this is `.other`, else nil.
+    var otherText: String? { get }
+}
+
+public extension OtherChoice {
+    var isOther: Bool { otherText != nil }
+}
+
 public enum BakeStatus: String, Codable, Hashable, Sendable, CaseIterable {
     case active, completed, abandoned
 }
@@ -67,7 +79,14 @@ public enum Rise: String, Codable, Hashable, Sendable, CaseIterable, PlanLabeled
     public var label: String { percent.map { "\($0)%" } ?? "not measured" }
 }
 
-public enum FirstIn: Codable, Hashable, Sendable, PlanLabeled {
+public enum FirstIn: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
+    public static var standardChoices: [FirstIn] { [.flourWater, .flourWaterSalt] }
+
+    public var otherText: String? {
+        if case .other(let text) = self { return text }
+        return nil
+    }
+
     case flourWater, flourWaterSalt
     case other(String)
 
@@ -92,7 +111,14 @@ public enum StarterTiming: String, Codable, Hashable, Sendable, CaseIterable, Pl
     }
 }
 
-public enum MixMethod: Codable, Hashable, Sendable, PlanLabeled {
+public enum MixMethod: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
+    public static var standardChoices: [MixMethod] { [.hand, .slapAndFold, .mixer] }
+
+    public var otherText: String? {
+        if case .other(let text) = self { return text }
+        return nil
+    }
+
     case hand, slapAndFold, mixer
     case other(String)
 
@@ -119,7 +145,14 @@ public enum StrengthMethod: String, Codable, Hashable, Sendable, CaseIterable, P
     }
 }
 
-public enum FinalShape: Codable, Hashable, Sendable, PlanLabeled {
+public enum FinalShape: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
+    public static var standardChoices: [FinalShape] { [.boule, .batard, .banneton, .loafPan] }
+
+    public var otherText: String? {
+        if case .other(let text) = self { return text }
+        return nil
+    }
+
     case boule, batard, banneton, loafPan
     case other(String)
 
@@ -134,7 +167,14 @@ public enum FinalShape: Codable, Hashable, Sendable, PlanLabeled {
     }
 }
 
-public enum Vessel: Codable, Hashable, Sendable, PlanLabeled {
+public enum Vessel: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
+    public static var standardChoices: [Vessel] { [.dutchOven, .stone, .steel, .tray] }
+
+    public var otherText: String? {
+        if case .other(let text) = self { return text }
+        return nil
+    }
+
     case dutchOven, stone, steel, tray
     case other(String)
 
@@ -149,7 +189,14 @@ public enum Vessel: Codable, Hashable, Sendable, PlanLabeled {
     }
 }
 
-public enum ColdLocation: Codable, Hashable, Sendable, PlanLabeled {
+public enum ColdLocation: Codable, Hashable, Sendable, PlanLabeled, OtherChoice {
+    public static var standardChoices: [ColdLocation] { [.fridge] }
+
+    public var otherText: String? {
+        if case .other(let text) = self { return text }
+        return nil
+    }
+
     case fridge
     case other(String)
 

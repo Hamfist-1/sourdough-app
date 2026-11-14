@@ -200,6 +200,15 @@ struct Validation {
             }
             #expect(close(sum, 0.9, 1e-9))
         }
+        let four = Formula(hydration: 0.7, saltPct: 0.02, starterPct: 0.2,
+                           flours: Array(repeating: 0.25, count: 4).map { FlourComponent(share: $0) })
+        #expect(throws: BuildError.tooManyFlours) {
+            try BuildSolver.solve(four, BuildInputs(totalMass: 1000))
+        }
+        let three = Formula(hydration: 0.7, saltPct: 0.02, starterPct: 0.2,
+                            flours: [0.5, 0.3, 0.2].map { FlourComponent(share: $0) })
+        _ = try? BuildSolver.solve(three, BuildInputs(totalMass: 1000))
+        #expect((try? BuildSolver.solve(three, BuildInputs(totalMass: 1000))) != nil)
         let none = Formula(hydration: 0.7, saltPct: 0.02, starterPct: 0.2, flours: [])
         #expect(throws: BuildError.noFlours) {
             try BuildSolver.solve(none, BuildInputs(totalMass: 1000))

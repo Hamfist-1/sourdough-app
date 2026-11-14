@@ -95,6 +95,8 @@ public enum FormulaField: Hashable, Sendable {
 public enum BuildError: Error, Hashable, Sendable {
     /// The formula has no flour.
     case noFlours
+    /// More than three flours (Formula.flourCountLimit).
+    case tooManyFlours
     /// The flour blend doesn't add up to 100%. Carries the actual sum.
     case flourSharesMustSumToOne(Double)
     /// A percentage in the formula is negative or not a number.
@@ -190,8 +192,10 @@ public enum BuildSolver {
 
     // MARK: Internals
 
-    static func validate(_ formula: Formula) throws(BuildError) {
+    /// Checks a formula on its own, before any inputs. Used by the version editor too.
+    public static func validate(_ formula: Formula) throws(BuildError) {
         guard !formula.flours.isEmpty else { throw .noFlours }
+        guard formula.flours.count <= Formula.flourCountLimit.upperBound else { throw .tooManyFlours }
         func ok(_ x: Double) -> Bool { x.isFinite && x >= 0 }
         guard ok(formula.saltPct) else { throw .invalidPercentage(.salt) }
         guard ok(formula.starterPct) else { throw .invalidPercentage(.starter) }

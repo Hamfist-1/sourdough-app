@@ -12,6 +12,7 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Query(filter: Bake.isActive) private var activeBakes: [Bake]
     @State private var section: AppSection?
+    @State private var recipePath = NavigationPath()
 
     var body: some View {
         Group {
@@ -20,6 +21,10 @@ struct RootView: View {
             } else {
                 sidebar
             }
+        }
+        .environment(\.showActiveBake) {
+            recipePath = NavigationPath()
+            section = .bake
         }
         .onAppear {
             if section == nil {
@@ -37,7 +42,7 @@ struct RootView: View {
             NavigationStack { ActiveBakeView(showRecipes: { section = .recipes }) }
                 .tabItem { Label("Bake", systemImage: "timer") }
                 .tag(AppSection.bake)
-            NavigationStack { RecipeListView() }
+            NavigationStack(path: $recipePath) { RecipeListView() }
                 .tabItem { Label("Recipes", systemImage: "book") }
                 .tag(AppSection.recipes)
             NavigationStack { SettingsView() }
@@ -55,12 +60,13 @@ struct RootView: View {
             }
             .navigationTitle("Sourdough")
         } detail: {
-            NavigationStack {
-                switch section ?? .recipes {
-                case .bake: ActiveBakeView(showRecipes: { section = .recipes })
-                case .recipes: RecipeListView()
-                case .settings: SettingsView()
-                }
+            switch section ?? .recipes {
+            case .bake:
+                NavigationStack { ActiveBakeView(showRecipes: { section = .recipes }) }
+            case .recipes:
+                NavigationStack(path: $recipePath) { RecipeListView() }
+            case .settings:
+                NavigationStack { SettingsView() }
             }
         }
     }

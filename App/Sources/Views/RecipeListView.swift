@@ -32,6 +32,7 @@ struct RecipeListView: View {
         }
         .navigationTitle("Recipes")
         .navigationDestination(for: Recipe.self) { RecipeDetailView(recipe: $0) }
+        .navigationDestination(for: BuildTarget.self) { BuildView(version: $0.version) }
         .toolbar {
             Button {
                 newName = ""
