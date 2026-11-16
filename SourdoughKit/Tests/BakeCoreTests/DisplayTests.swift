@@ -14,14 +14,14 @@ struct FormulaSheetTests {
         #expect(sheet.starter?.displayGrams == "113 g")
         #expect(sheet.starter?.summary == "20% · 100% hydration")
 
-        #expect(sheet.rows.map(\.label) == ["Total flour", "Flour", "Flour in starter",
-                                             "Total water (hydration)", "Water", "Water in starter", "Salt"])
+        #expect(sheet.rows.map(\.label) == ["Total flour", "Flour in starter", "Flour",
+                                             "Total water (hydration)", "Water in starter", "Water", "Salt"])
         #expect(sheet.rows.map(\.kind) == [.total, .component, .component, .total, .component, .component, .ingredient])
-        #expect(sheet.rows.map(\.displayPercent) == ["100%", "90%", "10%", "75%", "65%", "10%", "2%"])
+        #expect(sheet.rows.map(\.displayPercent) == ["100%", "10%", "90%", "75%", "10%", "65%", "2%"])
         let g = sheet.rows.map(\.grams)
         #expect(g[0] == 565 && g[1] + g[2] == 565)
         #expect(g[3] == 424 && g[4] + g[5] == 424)
-        #expect(g[2] + g[5] == 113)
+        #expect(g[1] + g[4] == 113)
         #expect(sheet.rows.last?.displayGrams == "11.3 g")
     }
 

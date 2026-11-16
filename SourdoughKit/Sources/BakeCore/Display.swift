@@ -43,8 +43,8 @@ public struct StarterLine: Hashable, Sendable {
 /// The baker's sheet for one batch. SPEC §6.
 ///
 /// Leads with the total dough and the starter, then total flour and total water, each
-/// followed by its parts (the flours you add plus the flour in the starter; the water you add
-/// plus the water in the starter), then salt and adjuncts. Percentages are of total flour,
+/// followed by its parts (the flour in the starter, then the flours you add; the water in the
+/// starter, then the water you add), then salt and adjuncts. Percentages are of total flour,
 /// starter flour included (SPEC §3.1). Parts are rounded so they add up exactly to their total,
 /// and the starter's flour and water add up exactly to the starter.
 public struct FormulaSheet: Hashable, Sendable {
@@ -71,16 +71,16 @@ public struct FormulaSheet: Hashable, Sendable {
         let flourParts = Rounding.apportion(r.flours.map(\.grams), to: totalFlour - starterFlour)
         rows.append(FormulaRow(id: "total-flour", label: "Total flour", percent: 1, grams: totalFlour, kind: .total))
         if r.flours.count + (hasStarter ? 1 : 0) > 1 {
+            if hasStarter {
+                rows.append(FormulaRow(id: "starter-flour", label: "Flour in starter", percent: pct(r.starterFlour),
+                                       grams: starterFlour, kind: .component))
+            }
             for (index, (weight, grams)) in zip(r.flours, flourParts).enumerated() {
                 rows.append(FormulaRow(
                     id: "flour-\(index)",
                     label: weight.name ?? (r.flours.count > 1 ? "Flour \(index + 1)" : "Flour"),
                     percent: pct(weight.grams), grams: grams, kind: .component
                 ))
-            }
-            if hasStarter {
-                rows.append(FormulaRow(id: "starter-flour", label: "Flour in starter", percent: pct(r.starterFlour),
-                                       grams: starterFlour, kind: .component))
             }
         }
 
@@ -89,10 +89,10 @@ public struct FormulaSheet: Hashable, Sendable {
         rows.append(FormulaRow(id: "total-water", label: "Total water (hydration)", percent: r.hydration,
                                grams: totalWater, kind: .total))
         if hasStarter {
-            rows.append(FormulaRow(id: "water", label: "Water", percent: pct(r.addedWater),
-                                   grams: totalWater - starterWater, kind: .component))
             rows.append(FormulaRow(id: "starter-water", label: "Water in starter", percent: pct(r.starterWater),
                                    grams: starterWater, kind: .component))
+            rows.append(FormulaRow(id: "water", label: "Water", percent: pct(r.addedWater),
+                                   grams: totalWater - starterWater, kind: .component))
         }
 
         // Salt and adjuncts
