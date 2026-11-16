@@ -17,6 +17,8 @@ struct FormulaSheetTests {
         #expect(sheet.rows.map(\.label) == ["Total flour", "Flour in starter", "Flour",
                                              "Total water (hydration)", "Water in starter", "Water", "Salt"])
         #expect(sheet.rows.map(\.kind) == [.total, .component, .component, .total, .component, .component, .ingredient])
+        // In bold: what goes on the scale for the build.
+        #expect(sheet.rows.filter(\.isWeighed).map(\.displayGrams) == ["509 g", "367 g"])
         #expect(sheet.rows.map(\.displayPercent) == ["100%", "10%", "90%", "75%", "10%", "65%", "2%"])
         let g = sheet.rows.map(\.grams)
         #expect(g[0] == 565 && g[1] + g[2] == 565)
@@ -46,6 +48,7 @@ struct FormulaSheetTests {
         let f = Formula(hydration: 0.7, saltPct: 0.02, starterPct: 0)
         let sheet = FormulaSheet.make(f, try BuildSolver.solve(f, BuildInputs(totalMass: 1000)))
         #expect(sheet.rows.map(\.label) == ["Total flour", "Total water (hydration)", "Salt"])
+        #expect(sheet.rows.map(\.isWeighed) == [true, true, false])
     }
 
     @Test("Apportioning keeps the sum exact")

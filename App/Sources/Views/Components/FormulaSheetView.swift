@@ -2,7 +2,8 @@ import SwiftUI
 import BakeCore
 
 /// The baker's sheet: total dough and starter up top, then total flour and total water with
-/// their parts indented beneath, then salt and adjuncts. Rows alternate between two light greys
+/// their parts indented beneath, then salt and adjuncts. What you weigh for the build (each flour
+/// and the water you add) is bold. Rows alternate between two light greys
 /// (placeholder styling until the design pass).
 ///
 /// Put it in a List row with `.listRowInsets(EdgeInsets())` so the shading runs edge to edge.
@@ -64,7 +65,7 @@ struct FormulaSheetView: View {
                         .monospacedDigit()
                         .frame(width: gramsWidth, alignment: .trailing)
                 }
-                .font(row.kind == .total ? .body.weight(.semibold) : .body)
+                .font(row.isWeighed ? .body.weight(.bold) : .body)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(index.isMultiple(of: 2) ? Color(uiColor: .systemGray6) : Color(uiColor: .systemGray5))

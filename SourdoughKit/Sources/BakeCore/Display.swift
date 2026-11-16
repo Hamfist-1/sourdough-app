@@ -24,6 +24,18 @@ public struct FormulaRow: Hashable, Sendable, Identifiable {
     /// Rounded for display; components add up exactly to their total.
     public let grams: Double
     public let kind: Kind
+    /// Something you put on the scale for the build: each flour and the water you add (or the
+    /// total itself when it has no parts shown). Shown in bold.
+    public let isWeighed: Bool
+
+    public init(id: String, label: String, percent: Double, grams: Double, kind: Kind, isWeighed: Bool = false) {
+        self.id = id
+        self.label = label
+        self.percent = percent
+        self.grams = grams
+        self.kind = kind
+        self.isWeighed = isWeighed
+    }
 
     public var displayGrams: String { Format.number(grams) + " g" }
     public var displayPercent: String { Format.percent(percent) }
@@ -69,8 +81,10 @@ public struct FormulaSheet: Hashable, Sendable {
         // Flour
         let totalFlour = F.rounded()
         let flourParts = Rounding.apportion(r.flours.map(\.grams), to: totalFlour - starterFlour)
-        rows.append(FormulaRow(id: "total-flour", label: "Total flour", percent: 1, grams: totalFlour, kind: .total))
-        if r.flours.count + (hasStarter ? 1 : 0) > 1 {
+        let showFlourParts = r.flours.count + (hasStarter ? 1 : 0) > 1
+        rows.append(FormulaRow(id: "total-flour", label: "Total flour", percent: 1, grams: totalFlour, kind: .total,
+                               isWeighed: !showFlourParts))
+        if showFlourParts {
             if hasStarter {
                 rows.append(FormulaRow(id: "starter-flour", label: "Flour in starter", percent: pct(r.starterFlour),
                                        grams: starterFlour, kind: .component))
@@ -79,7 +93,7 @@ public struct FormulaSheet: Hashable, Sendable {
                 rows.append(FormulaRow(
                     id: "flour-\(index)",
                     label: weight.name ?? (r.flours.count > 1 ? "Flour \(index + 1)" : "Flour"),
-                    percent: pct(weight.grams), grams: grams, kind: .component
+                    percent: pct(weight.grams), grams: grams, kind: .component, isWeighed: true
                 ))
             }
         }
@@ -87,12 +101,12 @@ public struct FormulaSheet: Hashable, Sendable {
         // Water
         let totalWater = (r.addedWater + r.starterWater).rounded()
         rows.append(FormulaRow(id: "total-water", label: "Total water (hydration)", percent: r.hydration,
-                               grams: totalWater, kind: .total))
+                               grams: totalWater, kind: .total, isWeighed: !hasStarter))
         if hasStarter {
             rows.append(FormulaRow(id: "starter-water", label: "Water in starter", percent: pct(r.starterWater),
                                    grams: starterWater, kind: .component))
             rows.append(FormulaRow(id: "water", label: "Water", percent: pct(r.addedWater),
-                                   grams: totalWater - starterWater, kind: .component))
+                                   grams: totalWater - starterWater, kind: .component, isWeighed: true))
         }
 
         // Salt and adjuncts
