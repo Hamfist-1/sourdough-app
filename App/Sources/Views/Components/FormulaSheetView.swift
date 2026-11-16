@@ -3,7 +3,8 @@ import BakeCore
 
 /// The baker's sheet: total dough and starter up top, then total flour and total water with
 /// their parts indented beneath, then salt and adjuncts. What you weigh for the build (each flour
-/// and the water you add) is bold. Rows alternate between two light greys
+/// and the water you add, the starter, the salt, and adjuncts that go in the mix) is bold;
+/// adjuncts added later, in bulk or final proof, are not. Rows alternate between two light greys
 /// (placeholder styling until the design pass).
 ///
 /// Put it in a List row with `.listRowInsets(EdgeInsets())` so the shading runs edge to edge.
@@ -31,13 +32,13 @@ struct FormulaSheetView: View {
             if let starter = sheet.starter {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Starter")
+                        Text("Starter").bold()
                         Text(starter.summary)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text(starter.displayGrams).monospacedDigit()
+                    Text(starter.displayGrams).monospacedDigit().bold()
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

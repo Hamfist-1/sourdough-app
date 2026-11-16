@@ -24,8 +24,10 @@ public struct FormulaRow: Hashable, Sendable, Identifiable {
     /// Rounded for display; components add up exactly to their total.
     public let grams: Double
     public let kind: Kind
-    /// Something you put on the scale for the build: each flour and the water you add (or the
-    /// total itself when it has no parts shown). Shown in bold.
+    /// Something you put on the scale for the first build: each flour and the water you add (or
+    /// the total itself when it has no parts shown), the salt, and adjuncts added in the mix.
+    /// Adjuncts added later, in bulk or final proof, aren't. Shown in bold. (The starter, shown
+    /// up top, is always part of the build.)
     public let isWeighed: Bool
 
     public init(id: String, label: String, percent: Double, grams: Double, kind: Kind, isWeighed: Bool = false) {
@@ -111,12 +113,13 @@ public struct FormulaSheet: Hashable, Sendable {
 
         // Salt and adjuncts
         rows.append(FormulaRow(id: "salt", label: "Salt", percent: f.saltPct,
-                               grams: WeightDisplay.rounded(r.salt, precise: true), kind: .ingredient))
+                               grams: WeightDisplay.rounded(r.salt, precise: true), kind: .ingredient, isWeighed: true))
         for (adjunct, weight) in zip(f.adjuncts, r.adjuncts) {
             rows.append(FormulaRow(
                 id: "adjunct-\(adjunct.id)",
                 label: adjunct.stage == .build ? adjunct.name : "\(adjunct.name) (in \(adjunct.stage.label))",
-                percent: adjunct.pct, grams: WeightDisplay.rounded(weight.grams, precise: true), kind: .ingredient
+                percent: adjunct.pct, grams: WeightDisplay.rounded(weight.grams, precise: true), kind: .ingredient,
+                isWeighed: adjunct.stage == .build
             ))
         }
 

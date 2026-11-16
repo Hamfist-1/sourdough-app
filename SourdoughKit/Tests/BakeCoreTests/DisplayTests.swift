@@ -18,7 +18,7 @@ struct FormulaSheetTests {
                                              "Total water (hydration)", "Water in starter", "Water", "Salt"])
         #expect(sheet.rows.map(\.kind) == [.total, .component, .component, .total, .component, .component, .ingredient])
         // In bold: what goes on the scale for the build.
-        #expect(sheet.rows.filter(\.isWeighed).map(\.displayGrams) == ["509 g", "367 g"])
+        #expect(sheet.rows.filter(\.isWeighed).map(\.displayGrams) == ["509 g", "367 g", "11.3 g"])
         #expect(sheet.rows.map(\.displayPercent) == ["100%", "10%", "90%", "75%", "10%", "65%", "2%"])
         let g = sheet.rows.map(\.grams)
         #expect(g[0] == 565 && g[1] + g[2] == 565)
@@ -41,6 +41,13 @@ struct FormulaSheetTests {
                                              "Total water (hydration)", "Salt", "Walnuts (in bulk)"])
         #expect(sheet.rows.prefix(4).map(\.displayGrams) == ["500 g", "350 g", "100 g", "50 g"])
         #expect(sheet.rows.last?.displayGrams == "75 g")
+        #expect(sheet.rows.last?.isWeighed == false)   // walnuts go in during bulk, not the first build
+
+        var inMix = f
+        inMix.adjuncts[0].stage = .build
+        let mixSheet = FormulaSheet.make(inMix, try BuildSolver.solve(inMix, BuildInputs(addedFlour: 500)))
+        #expect(mixSheet.rows.last?.label == "Walnuts")
+        #expect(mixSheet.rows.last?.isWeighed == true)
     }
 
     @Test("One flour and no starter shows just the totals")
@@ -48,7 +55,7 @@ struct FormulaSheetTests {
         let f = Formula(hydration: 0.7, saltPct: 0.02, starterPct: 0)
         let sheet = FormulaSheet.make(f, try BuildSolver.solve(f, BuildInputs(totalMass: 1000)))
         #expect(sheet.rows.map(\.label) == ["Total flour", "Total water (hydration)", "Salt"])
-        #expect(sheet.rows.map(\.isWeighed) == [true, true, false])
+        #expect(sheet.rows.map(\.isWeighed) == [true, true, true])
     }
 
     @Test("Apportioning keeps the sum exact")
