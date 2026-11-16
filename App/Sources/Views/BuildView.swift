@@ -15,12 +15,18 @@ struct BuildView: View {
     @State private var addedFlour: Double?
     @State private var addedWater: Double?
     @State private var hydrationPercent: Double?
-    @State private var loafCount = 1
+    @State private var loafCount: Int
     @State private var errorMessage: String?
 
+    init(version: RecipeVersion) {
+        self.version = version
+        _loafCount = State(initialValue: max(version.loafCount, 1))
+    }
+
+    /// With no weight typed, the bake uses the recipe's usual batch.
     private var inputs: BuildInputs {
         BuildInputs(
-            totalMass: totalMass,
+            totalMass: hasWeight ? totalMass : version.batchMass,
             addedFlour: addedFlour,
             addedWater: addedWater,
             hydration: hydrationPercent.map { $0 / 100 }
@@ -32,7 +38,6 @@ struct BuildView: View {
     }
 
     private var outcome: Result<BakePlan, BuildFailure>? {
-        guard hasWeight else { return nil }
         do {
             return .success(try BakePlan.build(
                 formula: version.formula,
@@ -49,7 +54,8 @@ struct BuildView: View {
         let recipeHydration = Format.percent(version.formula.hydration)
         Form {
             Section {
-                NumberField(title: "Total dough", value: $totalMass, suffix: "g")
+                NumberField(title: "Total dough", value: $totalMass, suffix: "g",
+                            prompt: Format.number(WeightDisplay.rounded(version.batchMass)))
                 NumberField(title: "Flour", value: $addedFlour, suffix: "g")
                 NumberField(title: "Water", value: $addedWater, suffix: "g")
                 NumberField(
@@ -61,7 +67,7 @@ struct BuildView: View {
             } header: {
                 Text("What you know")
             } footer: {
-                Text("Enter one weight to use the recipe's \(recipeHydration) hydration, or any two numbers. Flour and water are what you put on the scale, not counting the starter.")
+                Text("Left blank, the bake uses the recipe's usual batch (the grey number). Enter one weight to use the recipe's \(recipeHydration) hydration, or any two numbers. Flour and water are what you put on the scale, not counting the starter.")
             }
 
             Section {
@@ -114,7 +120,8 @@ struct BuildView: View {
         }
 
         Section {
-            FormulaTableView(sections: FormulaTable.sections(plan.formula, plan.weights))
+            FormulaSheetView(sheet: FormulaSheet.make(plan.formula, plan.weights))
+                .listRowInsets(EdgeInsets())
             LabeledContent(
                 loafCount == 1 ? "One loaf" : "Each of \(loafCount) loaves",
                 value: "\(Format.number(WeightDisplay.rounded(plan.weights.massPerLoaf(loafCount)))) g"

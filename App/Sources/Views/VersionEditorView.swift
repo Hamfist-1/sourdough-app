@@ -4,13 +4,16 @@ import BakeMath
 import BakeCore
 import BakeStore
 
-/// Edits a version that hasn't been baked yet: the recipe's name and notes, the formula and the
-/// process plan. Nothing is saved until Save.
+/// Edits a version that hasn't been baked yet: the recipe's name and notes, its batch (total dough
+/// weight and loaves), the formula and the process plan. Nothing is saved until Save.
+///
+/// The formula can be entered as percentages plus a total, or as weights (what goes on the scale),
+/// with the total as their sum. Both edit the same recipe: `formula` and `batchMass`.
 struct VersionEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @AppStorage("temperatureUnit") private var unit: TemperatureUnit = .default
-    @AppStorage("starterInGrams") private var starterInGrams = false
+    @AppStorage("enterRecipeAsWeights") private var asWeights = false
 
     let recipe: Recipe
     let version: RecipeVersion
@@ -20,9 +23,9 @@ struct VersionEditorView: View {
     @State private var changeNote: String
     @State private var formula: Formula
     @State private var process: ProcessPlan
+    @State private var batchMass: Double
+    @State private var loafCount: Int
     @State private var errorMessage: String?
-    /// The dough weight that starter grams are measured against.
-    @State private var referenceMass: Double?
     /// Autolyse yes/no. The duration is only asked for when it's on.
     @State private var autolyseOn: Bool
 
@@ -34,13 +37,15 @@ struct VersionEditorView: View {
         _changeNote = State(initialValue: version.changeNote)
         _formula = State(initialValue: version.formula)
         _process = State(initialValue: version.process)
-        _referenceMass = State(initialValue: version.completedBakes.last?.plan?.targetMass ?? 1000)
+        _batchMass = State(initialValue: version.batchMass)
+        _loafCount = State(initialValue: max(version.loafCount, 1))
         _autolyseOn = State(initialValue: version.process.autolyse != nil)
     }
 
     var body: some View {
         Form {
             recipeSection
+            batchSection
             formulaSection
             starterSection
             floursSection
@@ -72,7 +77,59 @@ struct VersionEditorView: View {
         }
     }
 
-    // MARK: Recipe and formula
+    // MARK: Weights mode
+
+    /// The recipe as weights at the current batch size.
+    private var weights: RecipeWeights {
+        RecipeWeights(formula: formula, totalMass: batchMass)
+    }
+
+    /// Applies edited weights: the percentages and the total both follow from them.
+    private func apply(_ edited: RecipeWeights) {
+        guard let newFormula = edited.formula() else { return }
+        formula = newFormula
+        batchMass = edited.totalMass
+    }
+
+    private func weight(_ keyPath: WritableKeyPath<RecipeWeights, Double>) -> Binding<Double?> {
+        Binding(
+            get: { weights[keyPath: keyPath] },
+            set: { newValue in
+                guard let newValue else { return }
+                var edited = weights
+                edited[keyPath: keyPath] = newValue
+                apply(edited)
+            }
+        )
+    }
+
+    private func flourWeight(_ id: UUID) -> Binding<Double?> {
+        Binding(
+            get: { weights.flours.first { $0.id == id }?.grams },
+            set: { newValue in
+                guard let newValue else { return }
+                var edited = weights
+                guard let index = edited.flours.firstIndex(where: { $0.id == id }) else { return }
+                edited.flours[index].grams = newValue
+                apply(edited)
+            }
+        )
+    }
+
+    private func adjunctWeight(_ id: UUID) -> Binding<Double?> {
+        Binding(
+            get: { weights.adjuncts.first { $0.id == id }?.grams },
+            set: { newValue in
+                guard let newValue else { return }
+                var edited = weights
+                guard let index = edited.adjuncts.firstIndex(where: { $0.id == id }) else { return }
+                edited.adjuncts[index].grams = newValue
+                apply(edited)
+            }
+        )
+    }
+
+    // MARK: Recipe, batch and formula
 
     private var recipeSection: some View {
         Section("Recipe") {
@@ -84,42 +141,57 @@ struct VersionEditorView: View {
         }
     }
 
-    private var formulaSection: some View {
+    private var batchSection: some View {
         Section {
-            NumberField(title: "Hydration", value: .percent($formula.hydration), suffix: "%")
-            NumberField(title: "Salt", value: .percent($formula.saltPct), suffix: "%")
+            Picker("Enter as", selection: $asWeights) {
+                Text("Percentages").tag(false)
+                Text("Weights").tag(true)
+            }
+            .pickerStyle(.segmented)
+
+            if asWeights {
+                LabeledContent("Total dough", value: "\(Format.number(WeightDisplay.rounded(batchMass))) g")
+            } else {
+                NumberField(
+                    title: "Total dough weight",
+                    value: Binding(get: { batchMass }, set: { if let v = $0, v > 0 { batchMass = v } }),
+                    suffix: "g"
+                )
+            }
+            Stepper("Loaves: \(loafCount)", value: $loafCount, in: 1...12)
         } header: {
-            Text("Formula")
+            Text("Batch")
         } footer: {
-            Text("Percentages are of total flour, including the flour in the starter. Hydration counts the starter's water.")
+            Text(asWeights
+                 ? "Enter what goes on the scale. The total is their sum, and the percentages are worked out for you."
+                 : "Enter percentages and a total; the grams are worked out for you. Changing the total or loaves only scales the recipe.")
         }
     }
 
-    private var mass: Double { max(referenceMass ?? 0, 0) }
-
-    /// Starter typed as grams in a dough of `referenceMass`; stored as a %.
-    private var starterGrams: Binding<Double?> {
-        Binding(
-            get: { mass > 0 ? StarterAmount.grams(formula, doughMass: mass) : nil },
-            set: { grams in
-                if let grams, mass > 0 {
-                    formula.starterPct = StarterAmount.percent(grams: grams, formula, doughMass: mass)
-                }
+    private var formulaSection: some View {
+        Section {
+            if asWeights {
+                NumberField(title: "Water", value: weight(\.water), suffix: "g")
+                LabeledContent("Hydration", value: Format.percent(formula.hydration))
+                NumberField(title: "Salt", value: weight(\.salt), suffix: "g")
+                LabeledContent("Salt %", value: Format.percent(formula.saltPct))
+            } else {
+                NumberField(title: "Hydration", value: .percent($formula.hydration), suffix: "%")
+                NumberField(title: "Salt", value: .percent($formula.saltPct), suffix: "%")
             }
-        )
+        } header: {
+            Text("Water and salt")
+        } footer: {
+            Text(asWeights
+                 ? "Water is what you add. Hydration counts the starter's water too."
+                 : "Percentages are of total flour, including the flour in the starter. Hydration counts the starter's water.")
+        }
     }
 
     private var starterSection: some View {
         Section {
-            Picker("Enter starter as", selection: $starterInGrams) {
-                Text("%").tag(false)
-                Text("Grams").tag(true)
-            }
-            .pickerStyle(.segmented)
-
-            if starterInGrams {
-                NumberField(title: "Starter", value: starterGrams, suffix: "g")
-                NumberField(title: "In a dough of", value: $referenceMass, suffix: "g")
+            if asWeights {
+                NumberField(title: "Starter", value: weight(\.starter), suffix: "g")
                 LabeledContent("Starter %", value: Format.percent(formula.starterPct))
             } else {
                 NumberField(title: "Starter", value: .percent($formula.starterPct), suffix: "%")
@@ -129,8 +201,9 @@ struct VersionEditorView: View {
         } header: {
             Text("Starter")
         } footer: {
-            if mass > 0 {
-                Text("In a \(Format.number(mass.rounded())) g dough: \(StarterAmount.description(grams: StarterAmount.grams(formula, doughMass: mass), starterHydration: formula.starterHydration)).")
+            let grams = weights.starter
+            if grams > 0 {
+                Text("\(StarterAmount.description(grams: grams, starterHydration: formula.starterHydration)).")
             }
         }
     }
@@ -139,21 +212,31 @@ struct VersionEditorView: View {
         formula.flours.reduce(0) { $0 + $1.share }
     }
 
+    private func removeFlours(at offsets: IndexSet) {
+        if asWeights {
+            var edited = weights
+            edited.flours.remove(atOffsets: offsets)
+            apply(edited)
+        } else {
+            formula.flours.remove(atOffsets: offsets)
+            if formula.flours.count == 1 { formula.flours[0].share = 1 }
+        }
+    }
+
     private var floursSection: some View {
         Section {
             ForEach($formula.flours) { $flour in
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("Flour type (e.g. bread flour)", text: .optional($flour.type))
-                    if formula.flours.count > 1 {
+                    if asWeights {
+                        NumberField(title: "Weight", value: flourWeight(flour.id), suffix: "g")
+                    } else if formula.flours.count > 1 {
                         NumberField(title: "Share of the flour you add", value: .percent($flour.share), suffix: "%")
                     }
                 }
                 .padding(.vertical, 2)
             }
-            .onDelete { offsets in
-                formula.flours.remove(atOffsets: offsets)
-                if formula.flours.count == 1 { formula.flours[0].share = 1 }
-            }
+            .onDelete(perform: removeFlours)
             .deleteDisabled(formula.flours.count <= 1)
 
             if formula.flours.count < Formula.flourCountLimit.upperBound {
@@ -166,7 +249,7 @@ struct VersionEditorView: View {
         } header: {
             Text("Flours (1 to 3)")
         } footer: {
-            if formula.flours.count > 1 {
+            if !asWeights && formula.flours.count > 1 {
                 let ok = abs(blendTotal - 1) <= 0.001
                 Text("Blend adds up to \(Format.percent(blendTotal))\(ok ? "." : ". It needs to be 100%.")")
                     .foregroundStyle(ok ? Color.secondary : Color.red)
@@ -176,12 +259,27 @@ struct VersionEditorView: View {
         }
     }
 
+    /// In weights mode, removing an adjunct lowers the total; the other weights stay put.
+    private func removeAdjuncts(at offsets: IndexSet) {
+        if asWeights {
+            var edited = weights
+            edited.adjuncts.remove(atOffsets: offsets)
+            apply(edited)
+        } else {
+            formula.adjuncts.remove(atOffsets: offsets)
+        }
+    }
+
     private var adjunctsSection: some View {
         Section {
             ForEach($formula.adjuncts) { $adjunct in
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("What it is (e.g. walnuts)", text: $adjunct.name)
-                    NumberField(title: "Amount", value: .percent($adjunct.pct), suffix: "%")
+                    if asWeights {
+                        NumberField(title: "Weight", value: adjunctWeight(adjunct.id), suffix: "g")
+                    } else {
+                        NumberField(title: "Amount", value: .percent($adjunct.pct), suffix: "%")
+                    }
                     Picker("Added in", selection: $adjunct.stage) {
                         ForEach(AdjunctStage.allCases, id: \.self) { stage in
                             Text(stage.label.prefix(1).uppercased() + stage.label.dropFirst()).tag(stage)
@@ -190,7 +288,7 @@ struct VersionEditorView: View {
                 }
                 .padding(.vertical, 2)
             }
-            .onDelete { formula.adjuncts.remove(atOffsets: $0) }
+            .onDelete(perform: removeAdjuncts)
 
             Button {
                 formula.adjuncts.append(AdjunctComponent(name: "", pct: 0))
@@ -200,7 +298,7 @@ struct VersionEditorView: View {
         } header: {
             Text("Adjuncts")
         } footer: {
-            Text("Seeds, nuts, cheese and other additions, as a % of total flour. They count toward the total dough weight.")
+            Text("Seeds, nuts, cheese and other additions. Their percentages are of total flour, and they count toward the total dough weight.")
         }
     }
 
@@ -302,10 +400,15 @@ struct VersionEditorView: View {
 
         do {
             try BuildSolver.validate(cleaned)
+            guard batchMass > 0 else {
+                errorMessage = "Enter a total dough weight."
+                return
+            }
             recipe.name = trimmedName
             recipe.notes = notes
             version.changeNote = changeNote
-            try BakeService(context: context).update(version, formula: cleaned, process: process)
+            try BakeService(context: context).update(version, formula: cleaned, process: process,
+                                                     batchMass: batchMass, loafCount: loafCount)
             dismiss()
         } catch {
             errorMessage = describe(error)

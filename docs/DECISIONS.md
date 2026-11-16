@@ -63,6 +63,10 @@ The owner's baking knowledge decides these; keep them unless the owner says othe
 | Final proof | A target rise (volume increase after shaping) from the shared 25% scale. Proof time and temperature are optional extras, kept for the proof timer. | Final proof is judged by rise, not the clock |
 | Scored | A yes/no switch at the top of the Bake section | It's decided before the oven settings |
 | Keyboard | Number pads get a Done button, and scrolling closes the keyboard | The number pad has no return key |
+| Scaling is never a new version | Changing a recipe's total dough weight or loaf count only scales it, even on a locked version. Changing any percentage (including starter hydration) on a baked version makes a new version. | "Scaling a recipe is the sine qua non of baker's percentages" |
+| Recipes hold a batch | Each version stores a usual total dough weight and loaf count. They lead the formula sheet and are Build's starting point. | The total is the sum of the ingredients, as the owner thinks of a recipe |
+| Two ways to enter a recipe | Percentages + total dough weight, or weights (what goes on the scale) with the total as their sum. One switch at the top of the editor; both edit the same recipe. Replaces the earlier starter %/grams switch. | Bakers write recipes both ways |
+| Formula sheet layout | Total dough, then the starter (grams, %, hydration) as an assumption, then Total flour with its parts, Total water with its parts, salt, adjuncts. Parts add up exactly to their totals. Alternating light-grey rows for now. | Starter is an assumption, not another ingredient; totals first, then what makes them up |
 
 ## Technical
 

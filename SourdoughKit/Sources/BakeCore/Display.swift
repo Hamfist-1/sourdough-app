@@ -4,92 +4,138 @@ import BakeMath
 // Display-ready views of formulas, weights and process plans, shared by the recipe page,
 // Build and (later) the bake summary. Pure data, so it's tested here rather than in the UI.
 
-// MARK: - Baker's percentage table
+// MARK: - Baker's percentage sheet
 
-/// One line of the combined table: name, % of total flour, grams.
+/// One line of the sheet: name, % of total flour, grams (already rounded for display).
 public struct FormulaRow: Hashable, Sendable, Identifiable {
     public enum Kind: Hashable, Sendable {
-        /// Something you weigh out.
-        case ingredient
-        /// Flour or water already inside the starter (for information; not weighed separately).
-        case fromStarter
-        /// A subtotal or the dough total.
+        /// Total flour or total water.
         case total
+        /// A part of the total above it (each flour, flour in starter, water, water in starter).
+        case component
+        /// Salt and adjuncts.
+        case ingredient
     }
 
     public let id: String
     public let label: String
     /// Fraction of total flour (0.75 = 75%).
     public let percent: Double
+    /// Rounded for display; components add up exactly to their total.
     public let grams: Double
     public let kind: Kind
-    /// Show to 0.1 g (salt, adjuncts).
-    public let precise: Bool
 
-    public var displayGrams: String {
-        Format.number(WeightDisplay.rounded(grams, precise: precise)) + " g"
-    }
-
+    public var displayGrams: String { Format.number(grams) + " g" }
     public var displayPercent: String { Format.percent(percent) }
 }
 
-public struct FormulaSection: Hashable, Sendable, Identifiable {
-    public var id: String { title }
-    public let title: String
-    public let rows: [FormulaRow]
+/// The starter, shown up top as an assumption rather than as another ingredient line.
+public struct StarterLine: Hashable, Sendable {
+    public let grams: Double
+    public let percent: Double
+    public let hydration: Double
+
+    /// "20% · 100% hydration"
+    public var summary: String { "\(Format.percent(percent)) · \(Format.percent(hydration)) hydration" }
+    public var displayGrams: String { Format.number(grams) + " g" }
 }
 
-public enum FormulaTable {
-    /// The baker's sheet: what you weigh, what the starter brings, and the totals.
-    /// Percentages are of total flour, starter flour included (SPEC §3.1).
-    public static func sections(_ f: Formula, _ r: BuildResult) -> [FormulaSection] {
+/// The baker's sheet for one batch. SPEC §6.
+///
+/// Leads with the total dough and the starter, then total flour and total water, each
+/// followed by its parts (the flours you add plus the flour in the starter; the water you add
+/// plus the water in the starter), then salt and adjuncts. Percentages are of total flour,
+/// starter flour included (SPEC §3.1). Parts are rounded so they add up exactly to their total,
+/// and the starter's flour and water add up exactly to the starter.
+public struct FormulaSheet: Hashable, Sendable {
+    public let totalDough: Double
+    public let starter: StarterLine?
+    public let rows: [FormulaRow]
+
+    public var displayTotalDough: String { Format.number(totalDough) + " g" }
+
+    public static func make(_ f: Formula, _ r: BuildResult) -> FormulaSheet {
         let F = r.totalFlour
         func pct(_ grams: Double) -> Double { F > 0 ? grams / F : 0 }
         let hasStarter = r.starter > 0
-        var sections: [FormulaSection] = []
 
-        var flour = r.flours.enumerated().map { index, w in
-            FormulaRow(id: "flour-\(index)", label: w.name ?? (r.flours.count > 1 ? "Flour \(index + 1)" : "Flour"),
-                       percent: pct(w.grams), grams: w.grams, kind: .ingredient, precise: false)
-        }
-        if hasStarter {
-            flour.append(FormulaRow(id: "starter-flour", label: "Flour in starter", percent: pct(r.starterFlour),
-                                    grams: r.starterFlour, kind: .fromStarter, precise: false))
-        }
-        flour.append(FormulaRow(id: "total-flour", label: "Total flour", percent: 1, grams: F, kind: .total, precise: false))
-        sections.append(FormulaSection(title: "Flour", rows: flour))
+        // Starter first, so its parts add up to it.
+        let starter = r.starter.rounded()
+        let starterFlour = hasStarter ? min(r.starterFlour.rounded(), starter) : 0
+        let starterWater = hasStarter ? starter - starterFlour : 0
 
-        var water = [FormulaRow(id: "water", label: "Water", percent: pct(r.addedWater), grams: r.addedWater,
-                                kind: .ingredient, precise: false)]
-        if hasStarter {
-            water.append(FormulaRow(id: "starter-water", label: "Water in starter", percent: pct(r.starterWater),
-                                    grams: r.starterWater, kind: .fromStarter, precise: false))
-            water.append(FormulaRow(id: "total-water", label: "Total water (hydration)", percent: r.hydration,
-                                    grams: r.addedWater + r.starterWater, kind: .total, precise: false))
-        }
-        sections.append(FormulaSection(title: "Water", rows: water))
+        var rows: [FormulaRow] = []
 
-        var other: [FormulaRow] = []
-        if hasStarter {
-            other.append(FormulaRow(id: "starter", label: "Starter at \(Format.percent(f.starterHydration)) hydration",
-                                    percent: f.starterPct, grams: r.starter, kind: .ingredient, precise: false))
-        }
-        other.append(FormulaRow(id: "salt", label: "Salt", percent: f.saltPct, grams: r.salt, kind: .ingredient, precise: true))
-        sections.append(FormulaSection(title: hasStarter ? "Starter and salt" : "Salt", rows: other))
-
-        if !f.adjuncts.isEmpty {
-            let adjuncts = zip(f.adjuncts, r.adjuncts).map { a, w in
-                FormulaRow(id: "adjunct-\(a.id)", label: a.stage == .build ? a.name : "\(a.name) (in \(a.stage.label))",
-                           percent: a.pct, grams: w.grams, kind: .ingredient, precise: true)
+        // Flour
+        let totalFlour = F.rounded()
+        let flourParts = Rounding.apportion(r.flours.map(\.grams), to: totalFlour - starterFlour)
+        rows.append(FormulaRow(id: "total-flour", label: "Total flour", percent: 1, grams: totalFlour, kind: .total))
+        if r.flours.count + (hasStarter ? 1 : 0) > 1 {
+            for (index, (weight, grams)) in zip(r.flours, flourParts).enumerated() {
+                rows.append(FormulaRow(
+                    id: "flour-\(index)",
+                    label: weight.name ?? (r.flours.count > 1 ? "Flour \(index + 1)" : "Flour"),
+                    percent: pct(weight.grams), grams: grams, kind: .component
+                ))
             }
-            sections.append(FormulaSection(title: "Adjuncts", rows: adjuncts))
+            if hasStarter {
+                rows.append(FormulaRow(id: "starter-flour", label: "Flour in starter", percent: pct(r.starterFlour),
+                                       grams: starterFlour, kind: .component))
+            }
         }
 
-        sections.append(FormulaSection(title: "Dough", rows: [
-            FormulaRow(id: "total-dough", label: "Total dough", percent: pct(r.totalMass), grams: r.totalMass,
-                       kind: .total, precise: false)
-        ]))
-        return sections
+        // Water
+        let totalWater = (r.addedWater + r.starterWater).rounded()
+        rows.append(FormulaRow(id: "total-water", label: "Total water (hydration)", percent: r.hydration,
+                               grams: totalWater, kind: .total))
+        if hasStarter {
+            rows.append(FormulaRow(id: "water", label: "Water", percent: pct(r.addedWater),
+                                   grams: totalWater - starterWater, kind: .component))
+            rows.append(FormulaRow(id: "starter-water", label: "Water in starter", percent: pct(r.starterWater),
+                                   grams: starterWater, kind: .component))
+        }
+
+        // Salt and adjuncts
+        rows.append(FormulaRow(id: "salt", label: "Salt", percent: f.saltPct,
+                               grams: WeightDisplay.rounded(r.salt, precise: true), kind: .ingredient))
+        for (adjunct, weight) in zip(f.adjuncts, r.adjuncts) {
+            rows.append(FormulaRow(
+                id: "adjunct-\(adjunct.id)",
+                label: adjunct.stage == .build ? adjunct.name : "\(adjunct.name) (in \(adjunct.stage.label))",
+                percent: adjunct.pct, grams: WeightDisplay.rounded(weight.grams, precise: true), kind: .ingredient
+            ))
+        }
+
+        return FormulaSheet(
+            totalDough: r.totalMass.rounded(),
+            starter: hasStarter ? StarterLine(grams: starter, percent: f.starterPct, hydration: f.starterHydration) : nil,
+            rows: rows
+        )
+    }
+}
+
+public enum Rounding {
+    /// Rounds `values` to whole grams so they add up exactly to `total` (largest remainder).
+    public static func apportion(_ values: [Double], to total: Double) -> [Double] {
+        guard !values.isEmpty else { return [] }
+        let floors = values.map { $0.rounded(.down) }
+        var result = floors
+        var remaining = Int((total - floors.reduce(0, +)).rounded())
+        let byFraction = values.indices.sorted { values[$0] - floors[$0] > values[$1] - floors[$1] }
+        var i = 0
+        while remaining > 0 {
+            result[byFraction[i % byFraction.count]] += 1
+            remaining -= 1
+            i += 1
+        }
+        i = 0
+        while remaining < 0 {
+            let index = byFraction[byFraction.count - 1 - (i % byFraction.count)]
+            if result[index] > 0 { result[index] -= 1; remaining += 1 }
+            i += 1
+            if i > 10 * byFraction.count { break }
+        }
+        return result
     }
 }
 
@@ -222,27 +268,9 @@ public extension BuildInput {
     }
 }
 
-// MARK: - Starter in grams
+// MARK: - Starter split
 
-/// Converts between starter % and grams of starter in a dough of a given weight, so the
-/// version editor can take the starter either way. The recipe always stores the %.
 public enum StarterAmount {
-    /// Total flour in a dough of `doughMass`. Doesn't depend on the starter %.
-    public static func totalFlour(_ f: Formula, doughMass: Double) -> Double {
-        doughMass / (1 + f.hydration + f.saltPct + f.adjunctPct)
-    }
-
-    /// Grams of starter in a dough of `doughMass`.
-    public static func grams(_ f: Formula, doughMass: Double) -> Double {
-        f.starterPct * totalFlour(f, doughMass: doughMass)
-    }
-
-    /// The starter % that puts `grams` of starter in a dough of `doughMass`.
-    public static func percent(grams: Double, _ f: Formula, doughMass: Double) -> Double {
-        let flour = totalFlour(f, doughMass: doughMass)
-        return flour > 0 ? grams / flour : 0
-    }
-
     /// How much of `grams` of starter is flour and how much is water.
     public static func split(grams: Double, starterHydration: Double) -> (flour: Double, water: Double) {
         let flour = grams / (1 + starterHydration)

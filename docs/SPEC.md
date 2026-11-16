@@ -62,6 +62,8 @@ All internal units: **grams**, **°C**, **seconds** (durations) and **Date** (ti
 | isFrozen | Bool (computed) | True once any bake of this version is `completed`. Frozen versions are read-only (§5.3) |
 | createdAt | Date | |
 | changeNote | String = "" | "What changed from the previous version" |
+| batchMass | Double = 1000 | The recipe's usual total dough weight (g). Scaling isn't a new version, so it can change while frozen |
+| loafCount | Int = 1 | The recipe's usual number of loaves. Also not frozen |
 | formula | Formula | Codable, §2.3 |
 | process | ProcessPlan | Codable, §2.4 |
 | recipe | Recipe? | inverse |
@@ -109,6 +111,8 @@ All percentages are **decimal fractions of total flour** (0.72 = 72%), where tot
 With one flour, its share is 1.0. With several, the app keeps shares summing to 1.0 (editing one rebalances the last-edited other; the UI shows an error if it can't).
 
 `AdjunctComponent`: `name: String`, `pct: Double` (of total flour), `stage: AdjunctStage` (`build`, `bulk`, `finalProof`).
+
+**Entry modes.** The editor takes the formula either as percentages plus a total dough weight, or as weights (`RecipeWeights`: each flour, water, salt, starter and adjuncts in grams, plus the starter hydration %). In weights mode the total is the sum, and the percentages are worked out by backing the starter's flour and water out of its weight: total flour = added flour + starter ÷ (1 + starter hydration). Both modes edit the same stored formula and batch.
 
 ### 2.4 `ProcessPlan` (Codable)
 
@@ -298,13 +302,15 @@ A bake always keeps its own plan and actuals, whatever is chosen. (This rule may
 |---|---|
 | Home | The active bake: current step, running timer, "next step". With no active bake, opens Recipes. |
 | Recipes | List of recipes, newest version shown, search. |
-| Recipe detail | Its versions, each with bake count and average overall score; new version; vary; compare. |
+| Recipe detail | One version at a time: header, actions, the formula sheet at the recipe's batch (editable total dough weight and loaves), the process in bake order, and its bakes. |
 | Version editor | Formula (percentages, flour blend, starter, adjuncts) and process plan. |
-| Build | The solver: enter any sufficient pair, see weights live, loaf count, conflicts. Starts the bake. |
+| Build | The solver: starts at the recipe's batch; enter any sufficient pair, see the formula sheet live, loaf count, conflicts. Starts the bake. |
 | Step screens | Mix, Bulk, Shape, Proof, Cold, Bake, Evaluate: planned values pre-filled, actuals logged, timers. |
 | Bake summary | One page: formula, timeline, conditions, bake, scores, notes. Empty optional fields hidden. Print and share as PDF. |
 | Compare | Two versions side by side: changed fields highlighted, and their bakes with scores. |
 | Settings | Temperature unit (°F default). Stored in `@AppStorage` (per device for now). |
+
+**Formula sheet** (recipe page, Build, Bake tab): total dough weight first, then the starter as an assumption (grams, % and hydration), then rows: **Total flour** (100%) with each flour and the flour in the starter indented beneath; **Total water (hydration)** with the water you add and the water in the starter beneath; salt; adjuncts. Parts are shown only when there's more than one. Every % is of total flour. Whole grams (0.1 g for salt and adjuncts), rounded so parts add up exactly to their total and the starter's flour and water add up to the starter. Rows alternate two light greys (placeholder until the design pass).
 
 **iPhone**: a tab bar (Bake, Recipes, Settings) with navigation stacks.
 **iPad**: `NavigationSplitView` (recipes → versions → detail); the active bake stays reachable from the sidebar.

@@ -12,6 +12,8 @@ public enum BakeServiceError: Error, Hashable, Sendable {
     case evaluationIncomplete
     /// The bake varied from its version, so the user must choose where to save it. SPEC §5.3.
     case versionChoiceRequired
+    /// Batch weight and loaf count must be more than zero.
+    case invalidBatch
     case versionIsFrozen
     case missingPlan
 }
@@ -35,10 +37,17 @@ public struct BakeService {
 
     /// A new recipe with version 1.
     @discardableResult
-    public func createRecipe(name: String, formula: Formula, process: ProcessPlan = ProcessPlan()) throws -> Recipe {
+    public func createRecipe(
+        name: String,
+        formula: Formula,
+        process: ProcessPlan = ProcessPlan(),
+        batchMass: Double = 1000,
+        loafCount: Int = 1
+    ) throws -> Recipe {
         let recipe = Recipe(name: name)
         context.insert(recipe)
-        let version = RecipeVersion(number: 1, formula: formula, process: process)
+        let version = RecipeVersion(number: 1, formula: formula, process: process,
+                                    batchMass: batchMass, loafCount: loafCount)
         context.insert(version)
         version.recipe = recipe
         try context.save()
@@ -46,10 +55,29 @@ public struct BakeService {
     }
 
     /// Edits a version in place. Only allowed before its first completed bake.
-    public func update(_ version: RecipeVersion, formula: Formula, process: ProcessPlan) throws {
+    public func update(
+        _ version: RecipeVersion,
+        formula: Formula,
+        process: ProcessPlan,
+        batchMass: Double? = nil,
+        loafCount: Int? = nil
+    ) throws {
         guard !version.isFrozen else { throw BakeServiceError.versionIsFrozen }
+        if let batchMass, let loafCount {
+            guard batchMass > 0, loafCount > 0 else { throw BakeServiceError.invalidBatch }
+            version.batchMass = batchMass
+            version.loafCount = loafCount
+        }
         version.formula = formula
         version.process = process
+        try context.save()
+    }
+
+    /// Rescales a version's usual batch. Scaling isn't a new version, so this works even when frozen.
+    public func setBatch(_ version: RecipeVersion, mass: Double, loafCount: Int) throws {
+        guard mass > 0, loafCount > 0 else { throw BakeServiceError.invalidBatch }
+        version.batchMass = mass
+        version.loafCount = loafCount
         try context.save()
     }
 
@@ -60,7 +88,9 @@ public struct BakeService {
             number: source.recipe?.nextVersionNumber ?? source.number + 1,
             formula: source.formula,
             process: source.process,
-            changeNote: changeNote
+            changeNote: changeNote,
+            batchMass: source.batchMass,
+            loafCount: source.loafCount
         )
         context.insert(version)
         version.recipe = source.recipe
@@ -150,14 +180,16 @@ public struct BakeService {
             case .newVersion:
                 version = RecipeVersion(
                     number: source?.recipe?.nextVersionNumber ?? 1,
-                    formula: plan.formula, process: plan.process, changeNote: note
+                    formula: plan.formula, process: plan.process, changeNote: note,
+                    batchMass: plan.targetMass, loafCount: plan.loafCount
                 )
                 context.insert(version)
                 version.recipe = source?.recipe
             case .newRecipe(let name):
                 let recipe = Recipe(name: name)
                 context.insert(recipe)
-                version = RecipeVersion(number: 1, formula: plan.formula, process: plan.process, changeNote: note)
+                version = RecipeVersion(number: 1, formula: plan.formula, process: plan.process, changeNote: note,
+                                        batchMass: plan.targetMass, loafCount: plan.loafCount)
                 context.insert(version)
                 version.recipe = recipe
             }

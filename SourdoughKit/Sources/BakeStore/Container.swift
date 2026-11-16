@@ -71,7 +71,8 @@ public enum SampleData {
             hydration: 0.72, saltPct: 0.02, starterPct: 0.20, starterHydration: 1.0,
             flours: [FlourComponent(type: "Bread flour", share: 0.9), FlourComponent(type: "Whole wheat", share: 0.1)]
         )
-        let recipe = try service.createRecipe(name: "Country loaf", formula: formula, process: process)
+        let recipe = try service.createRecipe(name: "Country loaf", formula: formula, process: process,
+                                              batchMass: 1800, loafCount: 2)
         guard let version = recipe.latestVersion else { return }
 
         let start = Date().addingTimeInterval(-2 * 86_400)

@@ -42,7 +42,8 @@ struct ActiveBakeView: View {
 
             if let plan = bake.plan {
                 Section {
-                    FormulaTableView(sections: FormulaTable.sections(plan.formula, plan.weights))
+                    FormulaSheetView(sheet: FormulaSheet.make(plan.formula, plan.weights))
+                        .listRowInsets(EdgeInsets())
                     LabeledContent("Loaves", value: "\(plan.loafCount)")
                 } header: {
                     Text("Weights")

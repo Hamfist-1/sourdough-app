@@ -56,6 +56,11 @@ public final class RecipeVersion {
     public var createdAt: Date = Date()
     /// What changed from the version it was derived from.
     public var changeNote: String = ""
+    /// The recipe's usual batch: total dough weight in grams. Scaling isn't a new version,
+    /// so this can change even when the version is frozen.
+    public var batchMass: Double = 1000
+    /// The recipe's usual number of loaves. Also not part of what freezes.
+    public var loafCount: Int = 1
     var formulaData: Data = Data()
     var processData: Data = Data()
 
@@ -69,11 +74,20 @@ public final class RecipeVersion {
     @Relationship(deleteRule: .nullify, inverse: \Bake.version)
     public var bakes: [Bake]? = []
 
-    public init(number: Int, formula: Formula, process: ProcessPlan = ProcessPlan(), changeNote: String = "") {
+    public init(
+        number: Int,
+        formula: Formula,
+        process: ProcessPlan = ProcessPlan(),
+        changeNote: String = "",
+        batchMass: Double = 1000,
+        loafCount: Int = 1
+    ) {
         self.id = UUID()
         self.number = number
         self.createdAt = Date()
         self.changeNote = changeNote
+        self.batchMass = batchMass
+        self.loafCount = loafCount
         self.formulaData = StoredJSON.encode(formula)
         self.processData = StoredJSON.encode(process)
     }

@@ -12,7 +12,6 @@ struct RecipeDetailView: View {
     let recipe: Recipe
 
     @State private var selectedNumber: Int?
-    @State private var sampleMass: Double?
     @State private var editing: RecipeVersion?
     @State private var errorMessage: String?
 
@@ -63,7 +62,7 @@ struct RecipeDetailView: View {
     private var versionSelection: Binding<Int> {
         Binding(
             get: { version?.number ?? 1 },
-            set: { selectedNumber = $0; sampleMass = nil }
+            set: { selectedNumber = $0 }
         )
     }
 
@@ -130,17 +129,27 @@ struct RecipeDetailView: View {
 
     @ViewBuilder
     private func formula(_ version: RecipeVersion) -> some View {
-        let defaultMass = version.completedBakes.last?.plan?.targetMass ?? 1000
-        let mass = sampleMass ?? defaultMass
         Section {
             NumberField(
-                title: "Sample dough weight",
-                value: Binding(get: { sampleMass ?? defaultMass }, set: { sampleMass = $0 }),
+                title: "Total dough weight",
+                value: Binding(
+                    get: { version.batchMass },
+                    set: { if let mass = $0, mass > 0 { setBatch(version, mass: mass, loaves: version.loafCount) } }
+                ),
                 suffix: "g"
             )
-            switch sampleTable(version.formula, mass: mass) {
-            case .success(let sections):
-                FormulaTableView(sections: sections)
+            Stepper(
+                "Loaves: \(version.loafCount), \(Format.number(WeightDisplay.rounded(version.batchMass / Double(max(version.loafCount, 1))))) g each",
+                value: Binding(
+                    get: { max(version.loafCount, 1) },
+                    set: { setBatch(version, mass: version.batchMass, loaves: $0) }
+                ),
+                in: 1...12
+            )
+            switch sheet(version.formula, mass: version.batchMass) {
+            case .success(let sheet):
+                FormulaSheetView(sheet: sheet, showsTotal: false)
+                    .listRowInsets(EdgeInsets())
             case .failure(let error):
                 Label(error.message, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.red)
@@ -148,7 +157,7 @@ struct RecipeDetailView: View {
         } header: {
             Text("Formula")
         } footer: {
-            Text("Percentages are of total flour, including the flour in the starter. Change the sample weight to see other sizes; it doesn't change the recipe.")
+            Text("Percentages are of total flour, including the flour in the starter. Changing the total or loaves scales the recipe; it doesn't make a new version.")
         }
     }
 
@@ -193,13 +202,20 @@ struct RecipeDetailView: View {
 
     // MARK: Actions
 
-    private func sampleTable(_ formula: Formula, mass: Double) -> Result<[FormulaSection], SampleError> {
-        guard mass > 0 else { return .failure(SampleError(message: "Enter a sample weight.")) }
+    private func sheet(_ formula: Formula, mass: Double) -> Result<FormulaSheet, SheetError> {
         do {
             let weights = try BuildSolver.solve(formula, BuildInputs(totalMass: mass))
-            return .success(FormulaTable.sections(formula, weights))
+            return .success(FormulaSheet.make(formula, weights))
         } catch {
-            return .failure(SampleError(message: describe(error)))
+            return .failure(SheetError(message: describe(error)))
+        }
+    }
+
+    private func setBatch(_ version: RecipeVersion, mass: Double, loaves: Int) {
+        do {
+            try BakeService(context: context).setBatch(version, mass: mass, loafCount: loaves)
+        } catch {
+            errorMessage = describe(error)
         }
     }
 
@@ -214,6 +230,6 @@ struct RecipeDetailView: View {
     }
 }
 
-private struct SampleError: Error {
+private struct SheetError: Error {
     let message: String
 }

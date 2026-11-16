@@ -120,6 +120,30 @@ struct BakeServiceTests {
         #expect(try service.delete(empty) == .deleted)
     }
 
+    @Test func batchCanChangeOnAFrozenVersion() throws {
+        let v = try version()
+        #expect(v.batchMass == 1000 && v.loafCount == 1)
+        let bake = try service.startBake(from: v, plan: try plan())
+        finishEvaluation(bake)
+        try service.complete(bake)
+        #expect(v.isFrozen)
+        try service.setBatch(v, mass: 1800, loafCount: 2)
+        #expect(v.batchMass == 1800 && v.loafCount == 2)
+        #expect(throws: BakeServiceError.invalidBatch) { try service.setBatch(v, mass: 0, loafCount: 2) }
+    }
+
+    @Test func newVersionKeepsTheBatchAndVariationTakesTheBakesSize() throws {
+        let v1 = try version()
+        try service.setBatch(v1, mass: 1500, loafCount: 3)
+        let copy = try service.newVersion(from: v1)
+        #expect(copy.batchMass == 1500 && copy.loafCount == 3)
+
+        let bake = try service.startBake(from: v1, plan: try plan(hydration: 0.75))
+        finishEvaluation(bake)
+        let v3 = try #require(try service.complete(bake, choice: .newVersion))
+        #expect(v3.batchMass == 1000 && v3.loafCount == 2)
+    }
+
     @Test func newVersionFromAFrozenOne() throws {
         let v1 = try version()
         let v2 = try service.newVersion(from: v1, changeNote: "Try more whole wheat")
