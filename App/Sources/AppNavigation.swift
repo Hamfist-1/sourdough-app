@@ -33,6 +33,7 @@ func describe(_ error: Error) -> String {
         case .bakeNotActive: return "This bake has already finished."
         case .evaluationIncomplete: return "Give the bake an overall score first."
         case .versionChoiceRequired: return "Choose where to save this bake's changes."
+        case .invalidBatch: return "The total dough weight and loaf count need to be more than zero."
         case .versionIsFrozen: return "This version has been baked, so it can't change. Make a new version instead."
         case .missingPlan: return "This bake's plan couldn't be read."
         }

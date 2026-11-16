@@ -146,7 +146,7 @@ struct RecipeDetailView: View {
                 ),
                 in: 1...12
             )
-            switch sheet(version.formula, mass: version.batchMass) {
+            switch formulaSheet(version.formula, mass: version.batchMass) {
             case .success(let sheet):
                 FormulaSheetView(sheet: sheet, showsTotal: false)
                     .listRowInsets(EdgeInsets())
@@ -202,7 +202,7 @@ struct RecipeDetailView: View {
 
     // MARK: Actions
 
-    private func sheet(_ formula: Formula, mass: Double) -> Result<FormulaSheet, SheetError> {
+    private func formulaSheet(_ formula: Formula, mass: Double) -> Result<FormulaSheet, SheetError> {
         do {
             let weights = try BuildSolver.solve(formula, BuildInputs(totalMass: mass))
             return .success(FormulaSheet.make(formula, weights))
